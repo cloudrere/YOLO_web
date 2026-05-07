@@ -1,38 +1,38 @@
 <template>
   <AppLayout>
     <section class="grid two">
-      <el-card shadow="never">
-        <template #header>Create User</template>
+      <el-card shadow="never" class="panel-card">
+        <template #header>创建用户</template>
         <el-form :model="form" label-width="110px">
-          <el-form-item label="Username"><el-input v-model="form.username" /></el-form-item>
-          <el-form-item label="Password"><el-input v-model="form.password" type="password" /></el-form-item>
-          <el-form-item label="Active"><el-switch v-model="form.is_active" /></el-form-item>
-          <el-form-item label="Superuser"><el-switch v-model="form.is_superuser" /></el-form-item>
-          <el-form-item label="Roles">
+          <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
+          <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
+          <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
+          <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
+          <el-form-item label="角色">
             <el-select v-model="form.role_ids" multiple style="width: 100%">
               <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
             </el-select>
           </el-form-item>
-          <el-button type="primary" @click="create">Create</el-button>
+          <el-button type="primary" @click="create">创建用户</el-button>
         </el-form>
       </el-card>
-      <el-card shadow="never">
-        <template #header>Permissions</template>
+      <el-card shadow="never" class="panel-card">
+        <template #header>权限码</template>
         <el-tag v-for="permission in permissions" :key="permission.id" class="tag">{{ permission.code }}</el-tag>
       </el-card>
     </section>
-    <el-card shadow="never">
-      <template #header><div class="toolbar"><span>Users</span><el-button @click="load">Refresh</el-button></div></template>
+    <el-card shadow="never" class="panel-card">
+      <template #header><div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div></template>
       <el-table :data="users">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="Username" />
-        <el-table-column prop="is_active" label="Active" width="100" />
-        <el-table-column prop="is_superuser" label="Super" width="100" />
-        <el-table-column label="Roles">
+        <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="is_active" label="启用" width="100" />
+        <el-table-column prop="is_superuser" label="超管" width="100" />
+        <el-table-column label="角色">
           <template #default="{ row }">{{ row.roles.map((role: any) => role.name).join(', ') }}</template>
         </el-table-column>
-        <el-table-column label="Actions" width="120">
-          <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">Delete</el-button></template>
+        <el-table-column label="操作" width="120">
+          <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">删除</el-button></template>
         </el-table-column>
       </el-table>
     </el-card>

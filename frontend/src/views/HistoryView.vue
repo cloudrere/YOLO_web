@@ -1,42 +1,42 @@
 <template>
   <AppLayout>
-    <el-card shadow="never">
+    <el-card shadow="never" class="panel-card">
       <template #header>
         <div class="toolbar">
-          <span>Detection History</span>
-          <el-button @click="load">Refresh</el-button>
+          <span>检测历史</span>
+          <el-button @click="load">刷新</el-button>
         </div>
       </template>
-      <el-form :inline="true" :model="filters">
-        <el-form-item label="Source">
-          <el-select v-model="filters.source_type" clearable placeholder="All" style="width: 160px">
-            <el-option label="Image" value="image" />
-            <el-option label="Batch Image" value="batch_image" />
-            <el-option label="Video" value="video" />
+      <el-form :inline="true" :model="filters" class="filter-bar">
+        <el-form-item label="来源类型">
+          <el-select v-model="filters.source_type" clearable placeholder="全部" style="width: 180px">
+            <el-option label="单图" value="image" />
+            <el-option label="批量图片" value="batch_image" />
+            <el-option label="视频" value="video" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Class">
-          <el-input v-model="filters.class_name" clearable placeholder="Class name" />
+        <el-form-item label="类别">
+          <el-input v-model="filters.class_name" clearable placeholder="输入类别名" />
         </el-form-item>
-        <el-button type="primary" @click="load">Search</el-button>
+        <el-button type="primary" @click="load">查询</el-button>
       </el-form>
       <el-table :data="rows" @row-click="openDetail">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="source_type" label="Source" width="130" />
-        <el-table-column prop="file_name" label="File" />
-        <el-table-column prop="status" label="Status" width="100" />
-        <el-table-column prop="result_count" label="Results" width="100" />
-        <el-table-column prop="duration_ms" label="Duration(ms)" width="130" />
-        <el-table-column prop="created_at" label="Created" width="190" />
-        <el-table-column label="Actions" width="120">
+        <el-table-column prop="source_type" label="来源" width="130" />
+        <el-table-column prop="file_name" label="文件名" />
+        <el-table-column prop="status" label="状态" width="100" />
+        <el-table-column prop="result_count" label="目标数" width="100" />
+        <el-table-column prop="duration_ms" label="耗时(ms)" width="130" />
+        <el-table-column prop="created_at" label="创建时间" width="190" />
+        <el-table-column label="操作" width="120">
           <template #default="{ row }">
-            <el-button type="danger" size="small" @click.stop="remove(row.id)">Delete</el-button>
+            <el-button type="danger" size="small" @click.stop="remove(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
       <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" @current-change="load" />
     </el-card>
-    <el-drawer v-model="drawer" title="Detection Detail" size="50%">
+    <el-drawer v-model="drawer" title="检测详情" size="52%">
       <DetectionResultTable :results="detail?.results || []" />
       <AnalysisPanel v-if="detail?.analysis" :analysis="detail.analysis" />
       <pre v-if="detail" class="json-box">{{ JSON.stringify(detail, null, 2) }}</pre>

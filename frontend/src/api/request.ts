@@ -20,13 +20,13 @@ request.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResponse<unknown>
     if (body && typeof body.code === 'number' && body.code !== 0) {
-      ElMessage.error(body.message || 'Request failed')
+      ElMessage.error(body.message || '请求失败')
       return Promise.reject(new Error(body.message))
     }
     return response
   },
   (error) => {
-    const message = error.response?.data?.message || error.message || 'Network error'
+    const message = error.response?.data?.message || error.message || '网络异常'
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token')
       router.push('/login')
