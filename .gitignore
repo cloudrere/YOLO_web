@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.db
+.env
+.claude/
+backend/.env
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+storage/uploads/*
+storage/results/*
+storage/models/*
+!storage/uploads/.gitkeep
+!storage/results/.gitkeep
+!storage/models/.gitkeep
