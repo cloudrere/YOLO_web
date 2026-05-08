@@ -141,7 +141,14 @@ def resolve_record_artifact(db: Session, record_id: int, kind: str = "result") -
     if not selected:
         raise AppException(40406, "Detection artifact not found", 404)
     path = Path(selected).resolve()
-    if path.is_dir():
+    if kind == "thumbnail" and record.source_type == "video":
+        task = db.query(Task).filter(Task.record_id == record.id).order_by(Task.id.desc()).first()
+        if task is not None:
+            frame_dir = settings.results_path / "video_frames" / str(task.id)
+            first_frame = next(iter(sorted(frame_dir.glob("*.jpg"))), None)
+            if first_frame is not None:
+                path = first_frame.resolve()
+    elif path.is_dir():
         first_frame = next(iter(sorted(path.glob("*.jpg"))), None)
         if first_frame is None:
             raise AppException(40406, "Detection artifact not found", 404)
@@ -178,6 +185,15 @@ def save_temp_detection_image(image_path: Path, detections: list[dict]) -> Path:
     output_path = settings.results_path / "temp" / f"{uuid4().hex}.jpg"
     write_frame(output_path, draw_detections(frame, detections))
     return output_path
+
+
+def create_video_writer(path: Path, frame, fps: float) -> cv2.VideoWriter:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    height, width = frame.shape[:2]
+    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), max(1.0, fps), (width, height))
+    if not writer.isOpened():
+        raise AppException(50021, "Cannot create detection video file")
+    return writer
 
 
 def detect_image(
@@ -391,71 +407,86 @@ def process_video_task(task: Task, db: Session) -> dict:
     step = max(1, int(fps / max(1, settings.video_sample_fps)))
     output_dir = settings.results_path / "video_frames" / str(task.id)
     output_dir.mkdir(parents=True, exist_ok=True)
+    video_output_path = settings.results_path / "videos" / f"task_{task.id}.mp4"
+    writer: cv2.VideoWriter | None = None
     processed_frames = 0
     sampled_frames = 0
     all_detections: list[dict] = []
     start = time.perf_counter()
 
-    while True:
-        db.refresh(task)
-        if task.status == "cancelled":
-            record.status = "cancelled"
-            db.commit()
-            cap.release()
-            create_log(db, "task", f"视频检测任务 {task.id} 已取消", module="detect", user_id=task.user_id)
-            return {
-                "record_id": record.id,
-                "frames_processed": processed_frames,
-                "frames_sampled": sampled_frames,
-                "results_count": len(all_detections),
-                "cancelled": True,
-                "original_url": record_file_url(record.id, "original"),
-            }
-        while task.status == "paused":
-            time.sleep(0.3)
+    try:
+        while True:
             db.refresh(task)
             if task.status == "cancelled":
                 record.status = "cancelled"
                 db.commit()
-                cap.release()
-                return {"record_id": record.id, "cancelled": True}
-        ok, frame = cap.read()
-        if not ok:
-            break
-        current_frame = processed_frames
-        processed_frames += 1
-        if current_frame % step != 0:
-            continue
-        detections = yolo_engine.predict_image(frame, conf=conf_value, iou=iou_value)
-        save_detection_results(db, record.id, detections, frame_id=current_frame, model_id=model_id)
-        annotated = draw_detections(frame, detections)
-        frame_path = output_dir / f"frame_{current_frame:08d}.jpg"
-        write_frame(frame_path, annotated)
-        sampled_frames += 1
-        all_detections.extend({**item, "frame_id": current_frame} for item in detections)
-        if frame_count:
-            task.progress = min(99.0, round((processed_frames / frame_count) * 100, 2))
-        else:
-            task.progress = min(99.0, sampled_frames)
-        db.commit()
+                create_log(db, "task", f"视频检测任务 {task.id} 已取消", module="detect", user_id=task.user_id)
+                return {
+                    "record_id": record.id,
+                    "frames_processed": processed_frames,
+                    "frames_sampled": sampled_frames,
+                    "results_count": len(all_detections),
+                    "cancelled": True,
+                    "frame_dir": str(output_dir),
+                    "original_url": record_file_url(record.id, "original"),
+                    "stream_path": f"/api/detect/video/stream/{task.id}",
+                }
+            while task.status == "paused":
+                time.sleep(0.3)
+                db.refresh(task)
+                if task.status == "cancelled":
+                    record.status = "cancelled"
+                    db.commit()
+                    return {"record_id": record.id, "cancelled": True, "frame_dir": str(output_dir)}
+            ok, frame = cap.read()
+            if not ok:
+                break
+            current_frame = processed_frames
+            processed_frames += 1
+            if current_frame % step != 0:
+                continue
+            detections = yolo_engine.predict_image(frame, conf=conf_value, iou=iou_value)
+            save_detection_results(db, record.id, detections, frame_id=current_frame, model_id=model_id)
+            annotated = draw_detections(frame, detections)
+            if writer is None:
+                writer = create_video_writer(video_output_path, annotated, min(float(fps), float(max(1, settings.video_sample_fps))))
+            writer.write(annotated)
+            frame_path = output_dir / f"frame_{current_frame:08d}.jpg"
+            write_frame(frame_path, annotated)
+            sampled_frames += 1
+            all_detections.extend({**item, "frame_id": current_frame} for item in detections)
+            if frame_count:
+                task.progress = min(99.0, round((processed_frames / frame_count) * 100, 2))
+            else:
+                task.progress = min(99.0, sampled_frames)
+            db.commit()
 
-    cap.release()
-    record.status = "done"
-    record.duration_ms = int((time.perf_counter() - start) * 1000)
-    record.result_path = str(output_dir)
-    db.commit()
-    create_log(db, "task", f"视频检测任务 {task.id} 已完成", module="detect", user_id=task.user_id)
-    return {
-        "record_id": record.id,
-        "frames_processed": processed_frames,
-        "frames_sampled": sampled_frames,
-        "results_count": len(all_detections),
-        "analysis": analysis_payload([detection_to_schema(item, db, model_id, item.get("frame_id")) for item in all_detections], analyze),
-        "frame_dir": str(output_dir),
-        "original_url": record_file_url(record.id, "original"),
-        "result_url": f"/api/detect/video/stream/{task.id}",
-        "stream_path": f"/api/detect/video/stream/{task.id}",
-    }
+        if writer is not None:
+            writer.release()
+            writer = None
+        record.status = "done"
+        record.duration_ms = int((time.perf_counter() - start) * 1000)
+        record.result_path = str(video_output_path if video_output_path.exists() else output_dir)
+        db.commit()
+        result_url = artifact_url(record.id) if Path(record.result_path).is_file() else f"/api/detect/video/stream/{task.id}"
+        create_log(db, "task", f"视频检测任务 {task.id} 已完成", module="detect", user_id=task.user_id)
+        return {
+            "record_id": record.id,
+            "frames_processed": processed_frames,
+            "frames_sampled": sampled_frames,
+            "results_count": len(all_detections),
+            "analysis": analysis_payload([detection_to_schema(item, db, model_id, item.get("frame_id")) for item in all_detections], analyze),
+            "frame_dir": str(output_dir),
+            "video_path": str(video_output_path) if video_output_path.exists() else "",
+            "original_url": record_file_url(record.id, "original"),
+            "result_url": result_url,
+            "video_url": result_url if Path(record.result_path).is_file() else "",
+            "stream_path": f"/api/detect/video/stream/{task.id}",
+        }
+    finally:
+        cap.release()
+        if writer is not None:
+            writer.release()
 
 
 def get_task(db: Session, task_id: int) -> Task:

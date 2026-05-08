@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import TrainingAnalysisView from '@/views/TrainingAnalysisView.vue'
 import DetectHomeView from '@/views/DetectHomeView.vue'
 import DetectImageView from '@/views/DetectImageView.vue'
 import DetectBatchView from '@/views/DetectBatchView.vue'
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: '/login', component: LoginView, meta: { public: true } },
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: DashboardView, meta: { permission: 'history:read' } },
+    { path: '/training-analysis', component: TrainingAnalysisView, meta: { permission: 'history:read' } },
     { path: '/detect', component: DetectHomeView, meta: { permission: 'detect:run' } },
     { path: '/detect/image', component: DetectImageView, meta: { permission: 'detect:run' } },
     { path: '/detect/batch', component: DetectBatchView, meta: { permission: 'detect:run' } },

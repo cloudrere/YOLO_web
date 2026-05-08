@@ -21,6 +21,11 @@ def get_active_model(db: Session) -> ModelInfo | None:
 
 
 def create_model(db: Session, name: str, path: str, version: str = "", class_names: list[str] | None = None) -> ModelInfo:
+    name = name.strip()
+    path = path.strip()
+    version = version.strip()
+    if not name or not path or not version:
+        raise AppException(40030, "Model name, path, and version are required")
     model_path = Path(path)
     if not model_path.is_absolute():
         model_path = settings.models_path / model_path

@@ -25,6 +25,24 @@ def _record_file_url(record: DetectionRecord, kind: str) -> str:
     return ""
 
 
+def _video_thumb_url(db: Session, record: DetectionRecord) -> str:
+    if record.source_type != "video":
+        return ""
+    task = db.query(Task).filter(Task.record_id == record.id).order_by(Task.id.desc()).first()
+    if task is not None:
+        frame_dir = Path(record.result_path) if Path(record.result_path).is_dir() else Path(record.result_path).parent.parent / "video_frames" / str(task.id)
+        if next(iter(sorted(frame_dir.glob("*.jpg"))), None):
+            return f"/api/detect/artifacts/{record.id}?kind=thumbnail"
+    return _record_file_url(record, "result")
+
+
+def _record_video_url(record: DetectionRecord) -> str:
+    if record.source_type != "video" or not record.result_path:
+        return ""
+    path = Path(record.result_path)
+    return f"/api/detect/artifacts/{record.id}?kind=result" if path.is_file() else ""
+
+
 def _video_stream_url(db: Session, record: DetectionRecord) -> str:
     if record.source_type != "video":
         return ""
@@ -98,6 +116,8 @@ def _record_to_item(db: Session, record: DetectionRecord) -> dict:
         "result_path": record.result_path,
         "original_url": _record_file_url(record, "original"),
         "result_url": _record_file_url(record, "result"),
+        "video_thumb_url": _video_thumb_url(db, record),
+        "video_url": _record_video_url(record),
         "video_stream_url": _video_stream_url(db, record),
         "status": record.status,
         "duration_ms": record.duration_ms,

@@ -38,3 +38,26 @@ def list_logs(
     total = query.count()
     items = query.order_by(SystemLog.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
     return items, total
+
+
+def delete_log(db: Session, log_id: int) -> int:
+    item = db.get(SystemLog, log_id)
+    if item is None:
+        return 0
+    db.delete(item)
+    db.commit()
+    return 1
+
+
+def delete_logs(db: Session, ids: list[int]) -> int:
+    if not ids:
+        return 0
+    deleted = db.query(SystemLog).filter(SystemLog.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return int(deleted)
+
+
+def delete_logs_by_date(db: Session, start_at, end_at) -> int:
+    deleted = db.query(SystemLog).filter(SystemLog.created_at >= start_at, SystemLog.created_at <= end_at).delete(synchronize_session=False)
+    db.commit()
+    return int(deleted)

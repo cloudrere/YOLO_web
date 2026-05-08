@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from app.api import admin, assistant, auth, dashboard, detect, history, log, model
+from app.api import admin, assistant, auth, dashboard, detect, history, log, model, training_analysis
 from app.core.config import settings
 from app.core.response import AppException, error_response
 from app.core.task_queue import task_queue
@@ -64,3 +64,4 @@ app.include_router(admin.router, prefix="/api")
 app.include_router(log.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(assistant.router, prefix="/api")
+app.include_router(training_analysis.router, prefix="/api")

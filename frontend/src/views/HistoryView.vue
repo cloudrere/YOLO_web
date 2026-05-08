@@ -39,7 +39,7 @@
               <div class="thumb-pair" :class="{ 'video-thumb-pair': row.source_type === 'video' }">
                 <template v-if="row.source_type === 'video'">
                   <div class="history-video-thumb">
-                    <img v-if="row.result_url || row.original_url" :src="mediaUrl(row.result_url || row.original_url)" alt="视频第一帧" />
+                    <img v-if="videoThumbUrl(row)" :src="mediaUrl(videoThumbUrl(row))" alt="视频第一帧" />
                     <button class="thumb-play" type="button" @click.stop="openDetail(row)">播放</button>
                   </div>
                 </template>
@@ -79,11 +79,12 @@
         <div><span>模型</span><strong>{{ detail.model_name || '暂无' }}</strong></div>
         <div><span>设备</span><strong>{{ detail.device || '暂无' }}</strong></div>
         <div><span>检测时间</span><strong>{{ detail.created_at_text || detail.created_at }}</strong></div>
-        <div><span>参数</span><strong>{{ detail.confidence_threshold }} / {{ detail.iou_threshold }}</strong></div>
+        <div><span>参数</span><strong>{{ formatParameters(detail) }}</strong></div>
       </div>
-      <div v-if="detail?.source_type === 'video' && detail.video_stream_url" class="history-video-player">
-        <div class="preview-header"><div><span>视频回放</span><strong>检测帧流</strong></div></div>
-        <img class="video-stream" :src="mediaUrl(detail.video_stream_url)" :alt="detail.file_name" />
+      <div v-if="detail?.source_type === 'video' && (detail.video_url || detail.video_stream_url)" class="history-video-player">
+        <div class="preview-header"><div><span>视频回放</span><strong>{{ detail.video_url ? '本地检测后视频' : '检测帧流' }}</strong></div></div>
+        <video v-if="detail.video_url" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata"></video>
+        <img v-else class="video-stream" :src="mediaUrl(detail.video_stream_url || '')" :alt="detail.file_name" />
       </div>
       <div v-if="detail?.original_url || detail?.result_url" class="compare-grid history-preview">
         <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
@@ -117,6 +118,9 @@ const selectedRows = ref<HistoryItem[]>([])
 function mediaUrl(path: string) {
   return apiMediaUrl(path)
 }
+function videoThumbUrl(row: HistoryItem) {
+  return row.video_thumb_url || row.result_url || row.original_url
+}
 function filterParams() {
   return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== ''))
 }
@@ -128,6 +132,10 @@ async function load() {
 }
 function handleSelectionChange(selection: HistoryItem[]) {
   selectedRows.value = selection
+}
+function formatParameters(detail: HistoryDetail | null) {
+  if (!detail) return '-'
+  return `置信度 ${detail.confidence_threshold} / IoU 阈值 ${detail.iou_threshold}`
 }
 async function openDetail(row: HistoryItem) {
   detail.value = await getHistory(row.id)

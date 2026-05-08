@@ -8,9 +8,9 @@ from app.core.response import success
 from app.db.session import get_db
 from app.models.system_log import SystemLog
 from app.models.user import User
-from app.schemas.log import LogCleanupRequest
+from app.schemas.log import LogBatchDeleteRequest, LogCleanupRequest, LogDateDeleteRequest
 from app.services.log_i18n_service import decorate_log
-from app.services.log_service import list_logs
+from app.services.log_service import delete_log, delete_logs, delete_logs_by_date, list_logs
 
 router = APIRouter(prefix="/logs", tags=["logs"])
 
@@ -36,6 +36,24 @@ def get_logs(
     )
 
 
+@router.delete("/batch/delete")
+def delete_logs_batch_api(
+    payload: LogBatchDeleteRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission("log:read")),
+):
+    return success({"deleted": delete_logs(db, payload.ids)})
+
+
+@router.delete("/by-date")
+def delete_logs_by_date_api(
+    payload: LogDateDeleteRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission("log:read")),
+):
+    return success({"deleted": delete_logs_by_date(db, payload.start_date, payload.end_date)})
+
+
 @router.delete("/cleanup")
 def cleanup_logs(
     payload: LogCleanupRequest,
@@ -46,3 +64,12 @@ def cleanup_logs(
     deleted = db.query(SystemLog).filter(SystemLog.created_at < before).delete(synchronize_session=False)
     db.commit()
     return success({"deleted": deleted})
+
+
+@router.delete("/{log_id}")
+def delete_log_api(
+    log_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission("log:read")),
+):
+    return success({"deleted": delete_log(db, log_id)})

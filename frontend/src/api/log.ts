@@ -17,3 +17,15 @@ export interface LogItem {
 export function listLogs(params: Record<string, unknown>) {
   return unwrap<{ items: LogItem[]; total: number; page: number; page_size: number }>(request.get('/logs', { params }))
 }
+
+export function deleteLog(id: number) {
+  return unwrap<{ deleted: number }>(request.delete(`/logs/${id}`))
+}
+
+export function deleteLogsBatch(ids: number[]) {
+  return unwrap<{ deleted: number }>(request.delete('/logs/batch/delete', { data: { ids } }))
+}
+
+export function deleteLogsByDate(start_date: string, end_date: string) {
+  return unwrap<{ deleted: number }>(request.delete('/logs/by-date', { data: { start_date, end_date } }))
+}

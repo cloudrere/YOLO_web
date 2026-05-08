@@ -11,10 +11,11 @@
 - 任务控制：批量图片、视频文件、实时视频流支持开始、暂停/继续、结束
 - 权限系统：登录、注册、简单忘记密码、JWT、用户、角色、权限码、RBAC 路由守卫
 - Dashboard：基础检测统计；管理员额外查看总用户数、用户检测统计、模型数、异常日志数、AI 调用次数、CPU/内存/GPU/温度状态和 CUDA 诊断
-- 历史管理：缩略图、视频第一帧与播放入口、检测详情、中文类别查询、用户查询、Excel 报表导出、全选批量删除
-- 模型管理：上传模型、登记模型路径、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护；普通用户可查看和上传，删除等管理操作需管理权限
-- 日志中心：级别、模块、类型支持中文显示，同时保留英文字段
-- AI 助手：独立 DeepSeek/OpenAI 兼容问答模块，不影响检测主流程
+- 历史管理：缩略图、检测后本地视频回放、视频第一帧与播放入口、检测详情、中文类别查询、用户查询、Excel 报表导出、全选批量删除
+- 训练分析：上传或选择 YOLO `results.csv`，生成 Precision / Recall、mAP、Loss、雷达图、柱状图和 AI 训练诊断
+- 模型管理：上传模型、登记模型路径必填校验、完整路径换行展示、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护；普通用户可查看和上传，删除等管理操作需管理权限
+- 日志中心：级别、模块、类型支持中文显示，同时保留英文字段，支持单个删除、批量删除和按日期删除
+- AI 助手：独立“AI深度学习助手”，支持 DeepSeek/OpenAI 兼容问答模块，不影响检测主流程
 - 中文前端：Vue3 + Element Plus + ECharts，工业检测中台风格与响应式布局
 
 ## 技术栈
@@ -29,7 +30,7 @@
 ```text
 backend/
   app/
-    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、AI助手接口
+    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、训练分析、AI助手接口
     constants/    # COCO 类别中英文字典
     core/         # YOLO 引擎、推理服务、任务队列、依赖、配置
     db/           # 数据库连接、初始化和轻量 schema patch
@@ -46,7 +47,7 @@ frontend/
     views/        # 页面
 storage/
   uploads/        # 上传文件
-  results/        # 检测结果、临时结果和视频帧
+  results/        # 检测结果、训练分析 CSV、临时结果、视频帧和检测后视频
   models/         # YOLO 模型文件
 ```
 
@@ -172,10 +173,10 @@ backend/app/constants/coco_classes.py
 
 - `POST /api/detect/image`：单图检测
 - `POST /api/detect/batch`：批量图片检测
-- `POST /api/detect/video`：创建视频检测任务
+- `POST /api/detect/video`：创建视频检测任务，完成后保存检测后本地视频用于历史回放
 - `GET /api/detect/tasks/{task_id}`：查询任务状态
 - `POST /api/detect/tasks/{task_id}/{pause|resume|cancel|end}`：控制任务
-- `GET /api/detect/artifacts/{record_id}?kind=original|result`：历史原图或检测图
+- `GET /api/detect/artifacts/{record_id}?kind=original|result|thumbnail`：历史原图、检测图、检测后视频或视频缩略图
 - `GET /api/detect/temp/{name}`：仅本地检测的临时预览文件
 - `GET /api/detect/video/stream/{task_id}`：视频 MJPEG 帧流
 - `GET /api/detect/realtime/stream`：实时视频流检测
@@ -188,10 +189,17 @@ backend/app/constants/coco_classes.py
 - `DELETE /api/history/{record_id}`：删除检测记录
 - `DELETE /api/history/batch/delete`：批量删除
 
+### 训练分析
+
+- `POST /api/training-analysis/upload`：上传 YOLO `results.csv` 并返回解析摘要
+- `GET /api/training-analysis/files`：列出已上传 CSV
+- `GET /api/training-analysis/summary?name=`：读取指定 CSV 并返回曲线、雷达图、柱状图和关键指标
+- `POST /api/training-analysis/ai-report`：基于 summary 生成中文 AI 训练分析
+
 ### 模型
 
 - `GET /api/models`：模型列表
-- `POST /api/models`：登记模型路径
+- `POST /api/models`：登记模型路径，模型名称、路径和版本号不能为空
 - `POST /api/models/upload`：上传模型（拥有模型查看权限的用户可用）
 - `POST /api/models/{model_id}/activate`：激活模型
 - `PATCH /api/models/{model_id}/display-name`：修改显示名称
@@ -205,9 +213,13 @@ backend/app/constants/coco_classes.py
 
 - `GET /api/admin/users?keyword=`：用户查询
 - `POST /api/admin/users`：创建用户
+- `PUT /api/admin/users/{user_id}`：更新用户状态、角色或重置密码
 - `GET /api/admin/roles`：角色列表
 - `GET /api/admin/permissions`：权限列表
 - `GET /api/logs`：日志列表，支持中文级别/模块/类型查询
+- `DELETE /api/logs/{log_id}`：删除单条日志
+- `DELETE /api/logs/batch/delete`：批量删除日志
+- `DELETE /api/logs/by-date`：按日期范围删除日志
 - `GET /api/dashboard/metrics`：统计指标和管理员系统状态
 - `GET /api/assistant/status`：AI 助手配置状态
 - `POST /api/assistant/chat`：AI 助手问答

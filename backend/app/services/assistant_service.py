@@ -40,6 +40,8 @@ def chat_with_assistant(db: Session, user: User, question: str) -> dict:
 
 
 def request_chat_completion(question: str) -> str:
+    if not settings.ai_assistant_base_url or not settings.ai_assistant_api_key:
+        raise AppException(40060, "AI assistant is not configured")
     url = settings.ai_assistant_base_url.rstrip("/")
     if not url.endswith("/chat/completions"):
         url = f"{url}/chat/completions"

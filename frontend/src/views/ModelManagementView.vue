@@ -42,11 +42,11 @@
       <el-card shadow="never" class="panel-card model-register-card compact-form-card">
         <template #header>导入模型</template>
         <el-form :model="form" label-position="top">
-          <el-form-item label="模型名称"><el-input v-model="form.name" placeholder="输入模型显示名称" /></el-form-item>
-          <el-form-item label="模型路径"><el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" /></el-form-item>
-          <el-form-item label="版本号"><el-input v-model="form.version" placeholder="输入版本标识" /></el-form-item>
+          <el-form-item label="模型名称" required><el-input v-model="form.name" placeholder="输入模型显示名称" /></el-form-item>
+          <el-form-item label="模型路径" required><el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" /></el-form-item>
+          <el-form-item label="版本号" required><el-input v-model="form.version" placeholder="输入版本标识" /></el-form-item>
           <div class="form-actions">
-            <el-button type="primary" :disabled="!canManageModel" @click="register">登记路径</el-button>
+            <el-button type="primary" :disabled="!canManageModel || !canRegisterModel" @click="register">登记路径</el-button>
           </div>
         </el-form>
         <div class="model-upload-zone">
@@ -79,7 +79,7 @@
           <el-table-column prop="path" label="路径" min-width="260">
             <template #default="{ row }">
               <el-tooltip :content="row.path" placement="top">
-                <span class="ellipsis-text">{{ row.path }}</span>
+                <span class="model-path-text">{{ row.path }}</span>
               </el-tooltip>
             </template>
           </el-table-column>
@@ -156,6 +156,7 @@ const selectedModel = ref<ModelInfo | null>(null)
 const mappingRows = ref<Array<{ class_name: string; class_zh: string }>>([])
 
 const canManageModel = computed(() => auth.hasPermission('model:manage'))
+const canRegisterModel = computed(() => Boolean(form.name.trim() && form.path.trim() && form.version.trim()))
 const displayDeviceOptions = computed<ModelDeviceInfo[]>(() => {
   const options = active.value?.available_devices || [{ value: 'auto', label: '自动', type: 'auto', available: true }, { value: 'cpu', label: 'CPU', type: 'cpu', available: true }]
   return options.map((option) => ({ ...option, label: deviceLabel(option.value) }))
@@ -198,7 +199,14 @@ async function load() {
   selectedDevice.value = active.value.requested_device || 'auto'
 }
 async function register() {
-  await registerModel({ ...form, class_names: [] })
+  const name = form.name.trim()
+  const path = form.path.trim()
+  const version = form.version.trim()
+  if (!name || !path || !version) {
+    ElMessage.warning('模型名称、路径和版本号不能为空')
+    return
+  }
+  await registerModel({ name, path, version, class_names: [] })
   Object.assign(form, { name: '', path: '', version: '' })
   ElMessage.success('模型路径已登记')
   await load()

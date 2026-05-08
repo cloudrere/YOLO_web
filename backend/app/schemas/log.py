@@ -27,5 +27,14 @@ class LogListResponse(BaseModel):
     page_size: int
 
 
+class LogBatchDeleteRequest(BaseModel):
+    ids: list[int]
+
+
+class LogDateDeleteRequest(BaseModel):
+    start_date: datetime
+    end_date: datetime
+
+
 class LogCleanupRequest(BaseModel):
     before_days: int = 30

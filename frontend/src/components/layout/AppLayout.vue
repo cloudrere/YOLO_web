@@ -10,11 +10,12 @@
       </div>
       <el-menu :default-active="activeMenuPath" router class="menu">
         <el-menu-item v-if="auth.hasPermission('history:read')" index="/dashboard">数据总览</el-menu-item>
+        <el-menu-item v-if="auth.hasPermission('history:read')" index="/training-analysis">训练分析</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('detect:run')" index="/detect">智能检测</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('history:read')" index="/history">检测历史</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('model:read')" index="/models">模型管理</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('log:read')" index="/logs">日志中心</el-menu-item>
-        <el-menu-item v-if="auth.hasPermission('admin:user')" index="/admin/users">用户权限</el-menu-item>
+        <el-menu-item v-if="auth.hasPermission('admin:user')" index="/admin/users">用户管理</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('assistant:use')" index="/assistant">AI 助手</el-menu-item>
       </el-menu>
       <div class="sidebar-footer">
@@ -49,6 +50,7 @@ const route = useRoute()
 const router = useRouter()
 const pageMeta: Record<string, { title: string; subtitle: string; breadcrumb: string }> = {
   '/dashboard': { title: '数据总览', subtitle: '集中展示检测量、用户统计、系统资源与类别分布趋势。', breadcrumb: '总览' },
+  '/training-analysis': { title: '训练分析', subtitle: '解析 YOLO results.csv，查看训练曲线、最终指标和 AI 诊断建议。', breadcrumb: '训练分析' },
   '/detect': { title: '智能检测', subtitle: '选择单图、批量、视频或实时流检测工作流，四个页面状态互不串扰。', breadcrumb: '检测' },
   '/detect/image': { title: '单图检测', subtitle: '上传图片并查看原图、检测图和目标列表。', breadcrumb: '检测 / 单图' },
   '/detect/batch': { title: '批量图片检测', subtitle: '多图队列逐张检测，支持暂停、继续、结束和进度反馈。', breadcrumb: '检测 / 批量' },
@@ -57,8 +59,8 @@ const pageMeta: Record<string, { title: string; subtitle: string; breadcrumb: st
   '/history': { title: '检测历史', subtitle: '按来源、中文类别、用户与时间追溯检测记录和结构化框数据。', breadcrumb: '历史' },
   '/models': { title: '模型管理', subtitle: '上传、登记、激活 YOLO 模型并维护 GPU 与类别中文映射。', breadcrumb: '模型' },
   '/logs': { title: '日志中心', subtitle: '查看登录、检测、模型切换与任务执行日志，中文显示关键字段。', breadcrumb: '日志' },
-  '/admin/users': { title: '用户权限', subtitle: '维护用户、角色与权限，支持关键词快速查询用户。', breadcrumb: '权限' },
-  '/assistant': { title: 'AI 助手', subtitle: '接入 DeepSeek 或 OpenAI 兼容模型进行独立问答，不影响检测主流程。', breadcrumb: '助手' },
+  '/admin/users': { title: '用户管理', subtitle: '维护用户、角色、账号状态、最后登录时间和密码重置。', breadcrumb: '用户' },
+  '/assistant': { title: 'AI深度学习助手', subtitle: '接入 DeepSeek 或 OpenAI 兼容模型进行独立问答，不影响检测主流程。', breadcrumb: '助手' },
 }
 const meta = computed(() => pageMeta[route.path] || pageMeta['/dashboard'])
 const activeMenuPath = computed(() => (route.path.startsWith('/detect') ? '/detect' : route.path))

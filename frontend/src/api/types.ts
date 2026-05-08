@@ -23,6 +23,8 @@ export interface User {
   username: string
   is_active: boolean
   is_superuser: boolean
+  created_at: string
+  last_login_at?: string | null
   roles: Role[]
 }
 

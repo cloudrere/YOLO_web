@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ModelOut(BaseModel):
@@ -26,6 +26,14 @@ class ModelCreateRequest(BaseModel):
     path: str
     version: str = ""
     class_names: list[str] = []
+
+    @field_validator("name", "path", "version")
+    @classmethod
+    def _not_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("cannot be empty")
+        return value
 
 
 class DeviceSwitchRequest(BaseModel):

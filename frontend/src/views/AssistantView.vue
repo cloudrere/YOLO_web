@@ -3,7 +3,7 @@
     <section class="assistant-shell panel-card">
       <div class="assistant-intro">
         <span class="eyebrow dark">独立问答模块</span>
-        <h2>AI 助手</h2>
+        <h2>AI深度学习助手</h2>
         <p>可接入 DeepSeek 或 OpenAI 兼容接口，用于说明检测结果、整理排查思路或回答系统使用问题。</p>
       </div>
       <el-tag :type="status?.configured ? 'success' : 'warning'">{{ status?.configured ? `已配置：${status.model}` : '未配置 API Key' }}</el-tag>
@@ -24,8 +24,8 @@
       <main class="assistant-chat-panel panel-card">
         <div class="assistant-conversation">
           <div class="chat-bubble assistant">
-            <strong>YOLO 视觉中台助手</strong>
-            <p>我可以帮助解释检测结果、排查 GPU/CUDA、整理模型管理和平台使用问题。</p>
+            <strong>AI深度学习助手</strong>
+            <p>我可以帮助解释检测结果、排查 GPU/CUDA、整理模型管理和深度学习训练分析问题。</p>
           </div>
           <template v-for="message in messages" :key="message.id">
             <div class="chat-bubble user"><strong>你</strong><p>{{ message.question }}</p></div>

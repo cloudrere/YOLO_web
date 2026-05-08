@@ -21,6 +21,8 @@ export interface HistoryItem {
   result_path: string
   original_url: string
   result_url: string
+  video_thumb_url?: string
+  video_url?: string
   video_stream_url?: string
   status: string
   duration_ms: number
