@@ -75,7 +75,7 @@ backend/requirements.txt
 在项目推荐的 Anaconda `ultralytics` 环境中安装：
 
 ```bash
-/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r backend/requirements.txt
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r requirements.txt
 ```
 
 如果已经进入 `backend` 目录，也可以执行：
