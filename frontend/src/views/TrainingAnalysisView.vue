@@ -22,6 +22,11 @@
           <el-button type="primary" :loading="uploading" :disabled="!csvFile || uploading" @click="uploadCsv">上传并分析</el-button>
           <el-button :loading="loadingFiles" @click="loadFiles">刷新列表</el-button>
         </div>
+        <div class="split-actions training-actions">
+          <el-button :disabled="!summary" @click="exportReport">导出报告</el-button>
+          <el-button type="danger" plain :disabled="!canManageTraining || !selectedName" @click="removeCurrentAnalysis">删除当前分析</el-button>
+          <el-button type="danger" :disabled="!canManageTraining || !files.length" @click="clearAllAnalyses">清空全部分析</el-button>
+        </div>
         <el-divider />
         <el-select v-model="selectedName" filterable placeholder="选择已上传 CSV" class="full" :loading="loadingFiles" @change="loadSummary">
           <el-option v-for="item in files" :key="item.name" :label="item.name" :value="item.name" />
@@ -100,10 +105,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import * as echarts from 'echarts'
-import { ElMessage, type UploadFile } from 'element-plus'
+import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { getAssistantStatus, type AssistantStatus } from '@/api/assistant'
 import {
+  clearTrainingAnalyses,
+  deleteTrainingAnalysis,
+  exportTrainingReport,
   getTrainingAiReport,
   getTrainingSummary,
   listTrainingFiles,
@@ -139,6 +147,7 @@ const summaryCards = computed(() => [
   { label: '最终 Recall', value: formatRatio(summary.value?.final_metrics.recall), desc: '最后一轮召回率' },
 ])
 const canUseAi = computed(() => Boolean(summary.value && auth.hasPermission('assistant:use') && assistantStatus.value?.configured))
+const canManageTraining = computed(() => auth.hasPermission('history:manage'))
 const aiStatusText = computed(() => {
   if (!auth.hasPermission('assistant:use')) return '无 AI 权限'
   return assistantStatus.value?.configured ? `AI 已配置：${assistantStatus.value.model}` : 'AI 未配置'
@@ -230,6 +239,47 @@ async function generateAiReport() {
   } finally {
     aiLoading.value = false
   }
+}
+async function exportReport() {
+  if (!summary.value) return
+  const response = await exportTrainingReport(summary.value.name)
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${summary.value.name.replace(/\.csv$/i, '')}_training_report.txt`
+  link.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('训练分析报告已导出')
+}
+async function removeCurrentAnalysis() {
+  if (!selectedName.value) return
+  try {
+    await ElMessageBox.confirm(`确认删除当前训练分析 ${selectedName.value} 吗？文件与数据库记录都会被移除。`, '删除当前分析', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
+  await deleteTrainingAnalysis(selectedName.value)
+  ElMessage.success('当前训练分析已删除')
+  summary.value = null
+  aiReport.value = ''
+  selectedName.value = ''
+  disposeCharts()
+  await loadFiles()
+}
+async function clearAllAnalyses() {
+  if (!files.value.length) return
+  try {
+    await ElMessageBox.confirm(`确认清空全部 ${files.value.length} 条训练分析吗？所有 CSV 文件和数据库记录都会被移除。`, '清空全部分析', { type: 'warning', confirmButtonText: '确认清空', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
+  await clearTrainingAnalyses()
+  ElMessage.success('全部训练分析已清空')
+  summary.value = null
+  aiReport.value = ''
+  selectedName.value = ''
+  files.value = []
+  disposeCharts()
 }
 function renderCharts() {
   disposeCharts()

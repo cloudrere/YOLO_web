@@ -2,10 +2,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class TrainingAnalysisFileOut(BaseModel):
+    id: int | None = None
     name: str
     path: str
     rows: int
     best_epoch: int | None = None
+    best_map50: float | None = None
+    best_map5095: float | None = None
+    file_size: int = 0
     created_at: str = ""
 
 

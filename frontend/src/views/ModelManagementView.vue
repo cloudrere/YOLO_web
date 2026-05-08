@@ -64,7 +64,9 @@
       </template>
       <div class="table-scroll model-table-shell">
         <el-table :data="models" class="model-table">
-          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column label="序号" width="80">
+            <template #default="{ $index }">{{ $index + 1 }}</template>
+          </el-table-column>
           <el-table-column prop="display_name" label="显示名称" min-width="150">
             <template #default="{ row }">{{ row.display_name || row.name }}</template>
           </el-table-column>

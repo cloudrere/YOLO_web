@@ -11,10 +11,11 @@
 - 任务控制：批量图片、视频文件、实时视频流支持开始、暂停/继续、结束
 - 权限系统：登录、注册、简单忘记密码、JWT、用户、角色、权限码、RBAC 路由守卫
 - Dashboard：基础检测统计；管理员额外查看总用户数、用户检测统计、模型数、异常日志数、AI 调用次数、CPU/内存/GPU/温度状态和 CUDA 诊断
-- 历史管理：缩略图、检测后本地视频回放、视频第一帧与播放入口、检测详情、中文类别查询、用户查询、Excel 报表导出、全选批量删除；视频详情只展示检测后视频回放
-- 训练分析：上传或选择 YOLO `results.csv`，按 epoch 连续绘制 Precision / Recall、mAP、Loss、学习率曲线，并生成雷达图、柱状图和 AI 训练诊断
-- 模型管理：上传模型、登记模型路径必填校验、完整路径换行展示、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护；普通用户可查看和上传，删除等管理操作需管理权限
+- 历史管理：缩略图、检测后本地视频回放、视频第一帧与播放入口、检测详情、中文类别查询、用户查询、Excel 报表导出、全选批量删除；视频详情只展示检测后视频回放，mp4 artifact 支持 Range 播放和帧流兜底
+- 训练分析：上传或选择 YOLO `results.csv`，按 epoch 连续绘制 Precision / Recall、mAP、Loss、学习率曲线，并生成雷达图、柱状图、导出分析报告、删除当前分析、清空全部分析和 AI 训练诊断
+- 模型管理：上传模型、登记模型路径必填校验、前端连续序号展示、完整路径换行展示、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护；普通用户可查看和上传，删除等管理操作需管理权限
 - 日志中心：级别、模块、类型支持中文显示，同时保留英文字段，支持单个删除、批量删除和按日期删除
+- 系统维护：管理员可查看 GPU/CUDA/torch、当前激活模型、数据库表、storage/logs 目录和磁盘空间状态；支持清除检测历史、清除日志、清除非激活模型和一键恢复初始化
 - AI 助手：独立“AI深度学习助手”，支持 DeepSeek/OpenAI 兼容问答模块，不影响检测主流程
 - 中文前端：Vue3 + Element Plus + ECharts，工业检测中台风格与响应式布局
 
@@ -30,7 +31,7 @@
 ```text
 backend/
   app/
-    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、训练分析、AI助手接口
+    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、训练分析、系统维护、AI助手接口
     constants/    # COCO 类别中英文字典
     core/         # YOLO 引擎、推理服务、任务队列、依赖、配置
     db/           # 数据库连接、初始化和轻量 schema patch
@@ -158,7 +159,7 @@ backend/app/constants/coco_classes.py
 - `iou`：IoU 阈值
 - `save_history`：是否写入历史记录
 
-`save_history=true` 时，系统写入数据库并保存原图、检测图；视频任务完成后会把检测后视频保存到 `storage/results/videos/`，历史详情优先用本地 mp4 播放。`save_history=false` 时，只保存临时预览文件，不写历史表，适合临时调参。智能检测页面不再展示 AI 分析，检测结果以图片、帧流和目标表格为主。
+`save_history=true` 时，系统写入数据库并保存原图、检测图；视频任务完成后会把检测后视频保存到 `storage/results/videos/`，历史详情优先用本地 mp4 播放，后端支持 HTTP Range，浏览器无法解码时前端会自动切换为检测帧流兜底。`save_history=false` 时，只保存临时预览文件，不写历史表，适合临时调参。智能检测页面不再展示 AI 分析，检测结果以图片、帧流和目标表格为主。
 
 ## 核心接口
 
@@ -177,7 +178,7 @@ backend/app/constants/coco_classes.py
 - `POST /api/detect/video`：创建视频检测任务，完成后保存检测后本地视频用于历史回放
 - `GET /api/detect/tasks/{task_id}`：查询任务状态
 - `POST /api/detect/tasks/{task_id}/{pause|resume|cancel|end}`：控制任务
-- `GET /api/detect/artifacts/{record_id}?kind=original|result|thumbnail`：历史原图、检测图、检测后视频或视频缩略图
+- `GET /api/detect/artifacts/{record_id}?kind=original|result|thumbnail|video`：历史原图、检测图、检测后视频或视频缩略图；mp4 支持 Range 播放
 - `GET /api/detect/temp/{name}`：仅本地检测的临时预览文件
 - `GET /api/detect/video/stream/{task_id}`：视频 MJPEG 帧流
 - `GET /api/detect/realtime/stream`：实时视频流检测
@@ -192,9 +193,12 @@ backend/app/constants/coco_classes.py
 
 ### 训练分析
 
-- `POST /api/training-analysis/upload`：上传 YOLO `results.csv` 并返回解析摘要
-- `GET /api/training-analysis/files`：列出已上传 CSV
+- `POST /api/training-analysis/upload`：上传 YOLO `results.csv`，写入训练分析记录并返回解析摘要
+- `GET /api/training-analysis/files`：列出已上传 CSV 和数据库记录
 - `GET /api/training-analysis/summary?name=`：读取指定 CSV 并返回曲线、雷达图、柱状图和关键指标
+- `GET /api/training-analysis/export?name=`：导出当前训练分析报告
+- `DELETE /api/training-analysis/{name}`：删除当前分析记录和对应 CSV 文件
+- `DELETE /api/training-analysis/clear`：清空全部训练分析记录和 CSV 文件
 - `POST /api/training-analysis/ai-report`：基于 summary 生成中文 AI 训练分析
 
 ### 模型
@@ -210,7 +214,7 @@ backend/app/constants/coco_classes.py
 - `GET /api/models/devices`：可用推理设备
 - `POST /api/models/device`：切换当前激活模型设备
 
-### 管理、日志、仪表盘、AI 助手
+### 管理、日志、仪表盘、系统维护、AI 助手
 
 - `GET /api/admin/users?keyword=`：用户查询
 - `POST /api/admin/users`：创建用户
@@ -222,6 +226,11 @@ backend/app/constants/coco_classes.py
 - `DELETE /api/logs/batch/delete`：批量删除日志
 - `DELETE /api/logs/by-date`：按日期范围删除日志
 - `GET /api/dashboard/metrics`：统计指标和管理员系统状态
+- `GET /api/maintenance/status`：系统维护状态检查，包含 GPU/CUDA/torch、模型、数据库和文件系统
+- `DELETE /api/maintenance/history`：清除检测历史数据库记录和检测文件，保留目录结构
+- `DELETE /api/maintenance/logs`：清除日志数据库记录和日志文件，保留目录结构
+- `DELETE /api/maintenance/models`：清除非激活模型记录和可安全删除的模型文件，保留当前激活模型
+- `POST /api/maintenance/restore-initial`：一键恢复初始化，保留 admin、默认配置、系统基础字典和当前激活/默认模型
 - `GET /api/assistant/status`：AI 助手配置状态
 - `POST /api/assistant/chat`：AI 助手问答
 

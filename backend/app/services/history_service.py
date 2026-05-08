@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
+from app.core.inference_service import resolve_record_video_file
 from app.core.response import AppException
 from app.models.detection_record import DetectionRecord
 from app.models.detection_result import DetectionResult
@@ -40,11 +41,10 @@ def _video_thumb_url(db: Session, record: DetectionRecord) -> str:
     return ""
 
 
-def _record_video_url(record: DetectionRecord) -> str:
-    if record.source_type != "video" or not record.result_path:
+def _record_video_url(db: Session, record: DetectionRecord) -> str:
+    if resolve_record_video_file(db, record) is None:
         return ""
-    path = Path(record.result_path)
-    return f"/api/detect/artifacts/{record.id}?kind=result" if path.is_file() else ""
+    return f"/api/detect/artifacts/{record.id}?kind=video"
 
 
 def _video_stream_url(db: Session, record: DetectionRecord) -> str:
@@ -121,7 +121,7 @@ def _record_to_item(db: Session, record: DetectionRecord) -> dict:
         "original_url": _record_file_url(record, "original"),
         "result_url": _record_file_url(record, "result"),
         "video_thumb_url": _video_thumb_url(db, record),
-        "video_url": _record_video_url(record),
+        "video_url": _record_video_url(db, record),
         "video_stream_url": _video_stream_url(db, record),
         "status": record.status,
         "duration_ms": record.duration_ms,

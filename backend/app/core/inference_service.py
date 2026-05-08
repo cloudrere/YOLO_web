@@ -58,6 +58,25 @@ def artifact_url(record_id: int) -> str:
     return record_file_url(record_id, "result")
 
 
+def resolve_record_video_file(db: Session, record: DetectionRecord) -> Path | None:
+    if record.source_type != "video":
+        return None
+    candidates: list[Path] = []
+    if record.result_path:
+        candidates.append(Path(record.result_path))
+    task = db.query(Task).filter(Task.record_id == record.id).order_by(Task.id.desc()).first()
+    if task is not None:
+        candidates.append(settings.results_path / "videos" / f"task_{task.id}.mp4")
+    results_root = settings.results_path.resolve()
+    for candidate in candidates:
+        path = candidate.resolve()
+        if results_root not in path.parents and path != results_root:
+            continue
+        if path.is_file() and path.suffix.lower() == ".mp4":
+            return path
+    return None
+
+
 def temp_file_url(path: Path) -> str:
     return f"/api/detect/temp/{path.name}"
 
@@ -139,6 +158,10 @@ def resolve_record_artifact(db: Session, record_id: int, kind: str = "result") -
     record = db.get(DetectionRecord, record_id)
     if record is None:
         raise AppException(40404, "Detection record not found", 404)
+    if kind in {"video", "result"}:
+        video_path = resolve_record_video_file(db, record)
+        if video_path is not None:
+            return video_path
     selected = record.original_path if kind == "original" else record.result_path
     if not selected:
         raise AppException(40406, "Detection artifact not found", 404)

@@ -1,10 +1,14 @@
 import { request, unwrap } from './request'
 
 export interface TrainingAnalysisFile {
+  id: number | null
   name: string
   path: string
   rows: number
   best_epoch: number | null
+  best_map50: number | null
+  best_map5095: number | null
+  file_size: number
   created_at: string
 }
 
@@ -64,4 +68,16 @@ export function getTrainingSummary(name: string) {
 
 export function getTrainingAiReport(name: string, summary: TrainingAnalysisSummary) {
   return unwrap<TrainingAnalysisAiReport>(request.post('/training-analysis/ai-report', { name, summary }))
+}
+
+export function exportTrainingReport(name: string) {
+  return request.get('/training-analysis/export', { params: { name }, responseType: 'blob' })
+}
+
+export function deleteTrainingAnalysis(name: string) {
+  return unwrap<{ deleted: number }>(request.delete(`/training-analysis/${encodeURIComponent(name)}`))
+}
+
+export function clearTrainingAnalyses() {
+  return unwrap<{ deleted: number }>(request.delete('/training-analysis/clear'))
 }

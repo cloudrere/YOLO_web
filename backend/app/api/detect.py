@@ -1,6 +1,7 @@
+from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,50 @@ def authorize_query_token(token: str | None, db: Session) -> User:
     if not ({"detect:run", "history:read"} & permissions) and not user.is_superuser:
         raise AppException(40300, "Permission denied", 403)
     return user
+
+
+def iter_file_range(path: Path, start: int, end: int):
+    with path.open("rb") as file:
+        file.seek(start)
+        remaining = end - start + 1
+        while remaining > 0:
+            chunk = file.read(min(1024 * 1024, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+            yield chunk
+
+
+def video_file_response(path: Path, range_header: str | None):
+    file_size = path.stat().st_size
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Disposition": f'inline; filename="{path.name}"',
+    }
+    if not range_header:
+        headers["Content-Length"] = str(file_size)
+        return FileResponse(path, media_type="video/mp4", headers=headers)
+    unit, _, value = range_header.partition("=")
+    if unit.strip().lower() != "bytes" or not value:
+        headers["Content-Length"] = str(file_size)
+        return FileResponse(path, media_type="video/mp4", headers=headers)
+    start_text, _, end_text = value.split(",", 1)[0].partition("-")
+    if start_text:
+        start = int(start_text)
+        end = int(end_text) if end_text else file_size - 1
+    else:
+        suffix_length = int(end_text or "0")
+        start = max(file_size - suffix_length, 0)
+        end = file_size - 1
+    start = max(0, min(start, file_size - 1))
+    end = max(start, min(end, file_size - 1))
+    headers.update(
+        {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Content-Length": str(end - start + 1),
+        }
+    )
+    return StreamingResponse(iter_file_range(path, start, end), status_code=206, media_type="video/mp4", headers=headers)
 
 
 @router.post("/image")
@@ -95,15 +140,16 @@ def control_task_api(
 @router.get("/artifacts/{record_id}")
 def get_artifact_api(
     record_id: int,
+    request: Request,
     kind: str = Query(default="result"),
     token: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     authorize_query_token(token, db)
     path = resolve_record_artifact(db, record_id, kind=kind)
-    media_type = "video/mp4" if path.suffix.lower() == ".mp4" else None
-    headers = {"Content-Disposition": f'inline; filename="{path.name}"'} if media_type else None
-    return FileResponse(path, media_type=media_type, headers=headers)
+    if path.suffix.lower() == ".mp4":
+        return video_file_response(path, request.headers.get("range"))
+    return FileResponse(path)
 
 
 @router.get("/temp/{name}")

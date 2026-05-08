@@ -7,7 +7,7 @@ from app.constants.coco_classes import default_class_mapping
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.db.session import Base, engine
-from app.models import ClassNameMapping, ModelInfo, Permission, Role, User
+from app.models import ClassNameMapping, ModelInfo, Permission, Role, TrainingAnalysisRecord, User
 
 PERMISSIONS = [
     ("detect:run", "Run detection", "Upload and run image or video detection"),
@@ -116,6 +116,10 @@ def init_default_model(db: Session) -> None:
     if existing is None:
         db.query(ModelInfo).update({ModelInfo.is_active: False})
         db.add(ModelInfo(name=model_path.stem, path=str(model_path), is_active=True))
+    elif existing.is_deleted:
+        db.query(ModelInfo).update({ModelInfo.is_active: False})
+        existing.is_deleted = False
+        existing.is_active = True
 
 
 def init_default_classes(db: Session) -> None:

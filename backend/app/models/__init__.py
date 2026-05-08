@@ -8,6 +8,7 @@ from app.models.system_log import SystemLog
 from app.models.task import Task
 from app.models.class_name_mapping import ClassNameMapping
 from app.models.ai_chat_log import AIChatLog
+from app.models.training_analysis_record import TrainingAnalysisRecord
 
 __all__ = [
     "User",
@@ -20,6 +21,7 @@ __all__ = [
     "Task",
     "ClassNameMapping",
     "AIChatLog",
+    "TrainingAnalysisRecord",
     "user_roles",
     "role_permissions",
 ]

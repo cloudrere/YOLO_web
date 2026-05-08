@@ -82,9 +82,10 @@
         <div><span>参数</span><strong>{{ formatParameters(detail) }}</strong></div>
       </div>
       <div v-if="detail?.source_type === 'video' && (detail.video_url || detail.video_stream_url)" class="history-video-player">
-        <div class="preview-header"><div><span>视频回放</span><strong>{{ detail.video_url ? '本地检测后视频' : '检测帧流' }}</strong></div></div>
-        <video v-if="detail.video_url" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata" playsinline></video>
-        <img v-else class="video-stream" :src="mediaUrl(detail.video_stream_url || '')" :alt="detail.file_name" />
+        <div class="preview-header"><div><span>视频回放</span><strong>{{ detail.video_url && !localVideoFailed ? '本地检测后视频' : '检测帧流' }}</strong></div></div>
+        <video v-if="detail.video_url && !localVideoFailed" :key="detail.id" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata" playsinline @error="handleVideoError"></video>
+        <img v-else-if="detail.video_stream_url" class="video-stream" :src="mediaUrl(detail.video_stream_url || '')" :alt="detail.file_name" />
+        <el-empty v-else description="暂无可播放视频" />
       </div>
       <div v-if="detail?.source_type !== 'video' && (detail?.original_url || detail?.result_url)" class="compare-grid history-preview">
         <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
@@ -109,6 +110,7 @@ import { deleteHistory, deleteHistoryBatch, exportHistory, getHistory, listHisto
 const rows = ref<HistoryItem[]>([])
 const detail = ref<HistoryDetail | null>(null)
 const drawer = ref(false)
+const localVideoFailed = ref(false)
 const total = ref(0)
 const page = ref(1)
 const pageSize = 20
@@ -138,8 +140,13 @@ function formatParameters(detail: HistoryDetail | null) {
   return `置信度 ${detail.confidence_threshold} / IoU 阈值 ${detail.iou_threshold}`
 }
 async function openDetail(row: HistoryItem) {
+  localVideoFailed.value = false
   detail.value = await getHistory(row.id)
   drawer.value = true
+}
+function handleVideoError() {
+  localVideoFailed.value = true
+  ElMessage.warning('本地视频暂不可直接播放，已切换为检测帧流')
 }
 async function remove(id: number) {
   try {

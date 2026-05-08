@@ -2688,3 +2688,127 @@ img {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+.maintenance-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 26px;
+  margin-bottom: 18px;
+}
+
+.maintenance-hero h2 {
+  margin: 8px 0;
+  font-size: clamp(26px, 3vw, 42px);
+}
+
+.maintenance-hero p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.maintenance-status-grid {
+  align-items: stretch;
+}
+
+.maintenance-status-card .el-card__body {
+  display: grid;
+  gap: 12px;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 111, 91, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.status-line span {
+  color: var(--color-muted);
+}
+
+.status-line strong {
+  max-width: 68%;
+  overflow-wrap: anywhere;
+  text-align: right;
+  color: var(--color-primary-deep);
+}
+
+.path-box,
+.maintenance-paths div,
+.diagnostic-list div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(31, 111, 91, 0.07);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.maintenance-paths,
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+}
+
+.maintenance-paths div,
+.diagnostic-list div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.maintenance-actions-panel {
+  margin-top: 18px;
+}
+
+.maintenance-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.maintenance-action-card {
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(185, 74, 58, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(185, 74, 58, 0.08));
+}
+
+.maintenance-action-card h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.maintenance-action-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 1180px) {
+  .maintenance-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .maintenance-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .maintenance-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}

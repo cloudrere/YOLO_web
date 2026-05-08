@@ -16,6 +16,7 @@
         <el-menu-item v-if="auth.hasPermission('model:read')" index="/models">模型管理</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('log:read')" index="/logs">日志中心</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('admin:user')" index="/admin/users">用户管理</el-menu-item>
+        <el-menu-item v-if="auth.hasPermission('admin:user')" index="/maintenance">系统维护</el-menu-item>
         <el-menu-item v-if="auth.hasPermission('assistant:use')" index="/assistant">AI 助手</el-menu-item>
       </el-menu>
       <div class="sidebar-footer">
@@ -60,6 +61,7 @@ const pageMeta: Record<string, { title: string; subtitle: string; breadcrumb: st
   '/models': { title: '模型管理', subtitle: '上传、登记、激活 YOLO 模型并维护 GPU 与类别中文映射。', breadcrumb: '模型' },
   '/logs': { title: '日志中心', subtitle: '查看登录、检测、模型切换与任务执行日志，中文显示关键字段。', breadcrumb: '日志' },
   '/admin/users': { title: '用户管理', subtitle: '维护用户、角色、账号状态、最后登录时间和密码重置。', breadcrumb: '用户' },
+  '/maintenance': { title: '系统维护', subtitle: '检查 GPU、模型、数据库、文件系统状态，并执行受控清理和初始化恢复。', breadcrumb: '维护' },
   '/assistant': { title: 'AI深度学习助手', subtitle: '接入 DeepSeek 或 OpenAI 兼容模型进行独立问答，不影响检测主流程。', breadcrumb: '助手' },
 }
 const meta = computed(() => pageMeta[route.path] || pageMeta['/dashboard'])
