@@ -32,7 +32,7 @@
           <div><span>CPU 使用率</span><strong>{{ formatPercent(system?.cpu_percent) }}</strong></div>
           <div><span>内存使用率</span><strong>{{ formatPercent(system?.memory?.percent) }}</strong></div>
           <div><span>可用内存</span><strong>{{ formatBytes(system?.memory?.available) }}</strong></div>
-          <div><span>温度</span><strong>{{ system?.temperature ?? '不可用' }}</strong></div>
+          <div><span>GPU 温度</span><strong>{{ system?.gpu_devices?.[0]?.temperature != null ? system.gpu_devices[0].temperature + '°C' : '不可用' }}</strong></div>
         </div>
         <div ref="resourceEl" class="chart mini-chart"></div>
       </el-card>
