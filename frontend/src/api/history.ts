@@ -16,6 +16,7 @@ export interface HistoryItem {
 
 export interface HistoryDetail extends HistoryItem {
   result_path: string
+  result_url: string
   results: DetectionResult[]
   analysis: AIAnalysis
 }

@@ -1,6 +1,7 @@
 import json
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import cv2
 from fastapi import UploadFile
@@ -19,7 +20,6 @@ from app.services.log_service import create_log
 from app.services.model_service import ensure_active_model_loaded
 from app.utils.files import remove_file, save_upload_file
 from app.utils.image import draw_detections, write_frame
-from app.utils.time import utc_now
 
 
 def detection_to_schema(item: dict, frame_id: int | None = None) -> dict:
@@ -38,6 +38,10 @@ def result_row_to_dict(row: DetectionResult) -> dict:
         "bbox": (row.x1, row.y1, row.x2, row.y2),
         "frame_id": row.frame_id,
     }
+
+
+def artifact_url(record_id: int) -> str:
+    return f"/api/detect/artifacts/{record_id}"
 
 
 def create_record(
@@ -80,6 +84,31 @@ def save_detection_results(db: Session, record_id: int, detections: list[dict], 
         )
 
 
+def save_annotated_image(record: DetectionRecord, image_path: Path, detections: list[dict], group: str) -> str:
+    frame = cv2.imread(str(image_path))
+    if frame is None:
+        raise AppException(40021, "Cannot read image file")
+    output_path = settings.results_path / group / f"record_{record.id}.jpg"
+    write_frame(output_path, draw_detections(frame, detections))
+    record.result_path = str(output_path)
+    return artifact_url(record.id)
+
+
+def resolve_record_artifact(db: Session, record_id: int) -> Path:
+    record = db.get(DetectionRecord, record_id)
+    if record is None:
+        raise AppException(40404, "Detection record not found", 404)
+    if not record.result_path:
+        raise AppException(40406, "Detection artifact not found", 404)
+    path = Path(record.result_path).resolve()
+    results_root = settings.results_path.resolve()
+    if results_root not in path.parents and path != results_root:
+        raise AppException(40301, "Artifact path is outside result storage", 403)
+    if not path.exists() or not path.is_file():
+        raise AppException(40406, "Detection artifact not found", 404)
+    return path
+
+
 def detect_image(db: Session, file: UploadFile, user: User) -> dict:
     active_model = ensure_active_model_loaded(db)
     saved = save_upload_file(file, settings.uploads_path / "images")
@@ -89,6 +118,7 @@ def detect_image(db: Session, file: UploadFile, user: User) -> dict:
     record = create_record(db, user.id, active_model.id, "image", file.filename or saved.name, str(saved))
     record.duration_ms = duration_ms
     save_detection_results(db, record.id, detections)
+    result_url = save_annotated_image(record, saved, detections, "images")
     db.commit()
     create_log(db, "detect", f"Image detection completed for record {record.id}", module="detect", user_id=user.id)
     output = [detection_to_schema(item) for item in detections]
@@ -97,6 +127,7 @@ def detect_image(db: Session, file: UploadFile, user: User) -> dict:
         "results": output,
         "analysis": analyze_detection_results(detections),
         "duration_ms": duration_ms,
+        "result_url": result_url,
     }
 
 
@@ -114,6 +145,7 @@ def detect_batch(db: Session, files: list[UploadFile], user: User) -> dict:
         record = create_record(db, user.id, active_model.id, "batch_image", file.filename or path.name, str(path))
         save_detection_results(db, record.id, detections)
         record.duration_ms = int((time.perf_counter() - start) * 1000)
+        result_url = save_annotated_image(record, path, detections, "batch")
         db.commit()
         items.append(
             {
@@ -123,6 +155,7 @@ def detect_batch(db: Session, files: list[UploadFile], user: User) -> dict:
                 "results": [detection_to_schema(item) for item in detections],
                 "analysis": analyze_detection_results(detections),
                 "error": "",
+                "result_url": result_url,
             }
         )
     create_log(db, "detect", f"Batch detection completed for {len(items)} files", module="detect", user_id=user.id)
@@ -207,6 +240,7 @@ def process_video_task(task: Task, db: Session) -> dict:
         "results_count": len(all_detections),
         "analysis": analyze_detection_results(all_detections),
         "frame_dir": str(output_dir),
+        "stream_path": f"/api/detect/video/stream/{task.id}",
     }
 
 
@@ -235,6 +269,7 @@ def get_record_detail(db: Session, record_id: int) -> dict:
         "created_at": record.created_at,
         "results": results,
         "analysis": analyze_detection_results(results),
+        "result_url": artifact_url(record.id) if record.result_path and Path(record.result_path).is_file() else "",
     }
 
 
@@ -254,6 +289,46 @@ def stream_video_frames(task_id: int):
         if time.monotonic() - idle_started > settings.stream_frame_timeout_seconds:
             break
         time.sleep(0.2)
+
+
+def normalize_realtime_source(source: str):
+    value = source.strip()
+    if value.isdigit():
+        return int(value)
+    parsed = urlparse(value)
+    if parsed.scheme.lower() in {"rtsp", "http", "https"} and parsed.netloc:
+        return value
+    raise AppException(40022, "Realtime source must be a camera index or RTSP/HTTP(S) stream URL")
+
+
+def stream_realtime_source(source: str):
+    cap = cv2.VideoCapture(normalize_realtime_source(source))
+    if not cap.isOpened():
+        raise AppException(40023, "Cannot open realtime video source")
+
+    def frames():
+        min_interval = 1 / max(1, settings.video_sample_fps)
+        last_sent = 0.0
+        try:
+            while True:
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                now = time.monotonic()
+                if now - last_sent < min_interval:
+                    time.sleep(0.01)
+                    continue
+                detections = yolo_engine.predict_image(frame)
+                annotated = draw_detections(frame, detections)
+                ok, buffer = cv2.imencode(".jpg", annotated)
+                if not ok:
+                    continue
+                last_sent = now
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
+        finally:
+            cap.release()
+
+    return frames()
 
 
 def delete_record(db: Session, record_id: int, delete_file: bool = False) -> None:

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     result_dir: str = "../storage/results"
     model_dir: str = "../storage/models"
     default_model_path: str = ""
+    yolo_device: str = "auto"
     confidence_threshold: float = 0.25
     video_sample_fps: int = 2
     task_max_retries: int = 2

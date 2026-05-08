@@ -51,6 +51,27 @@ export interface ModelInfo {
   updated_at: string
 }
 
+export interface ModelDeviceInfo {
+  value: string
+  label: string
+  type: 'auto' | 'cpu' | 'cuda' | string
+  available: boolean
+  total_memory?: number | null
+}
+
+export interface ModelEngineState {
+  active_model: ModelInfo | null
+  engine_loaded: boolean
+  device: string
+  requested_device: string
+  available_devices: ModelDeviceInfo[]
+  cuda_available: boolean
+  cuda_name: string
+  model_path: string
+  warmup_status: string
+  warmup_error: string
+}
+
 export interface TaskInfo {
   id: number
   type: string

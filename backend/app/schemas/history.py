@@ -33,6 +33,7 @@ class DetectionRecordDetail(BaseModel):
     created_at: datetime
     results: list[DetectionResultOut]
     analysis: AIAnalysisOut
+    result_url: str = ""
 
 
 class BatchDeleteRequest(BaseModel):

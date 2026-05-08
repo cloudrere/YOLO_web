@@ -1,5 +1,5 @@
 import { request, unwrap } from './request'
-import type { ModelInfo } from './types'
+import type { ModelEngineState, ModelInfo } from './types'
 
 export function listModels() {
   return unwrap<{ items: ModelInfo[] }>(request.get('/models'))
@@ -17,12 +17,18 @@ export function uploadModel(file: File, name?: string, version = '') {
   return unwrap<ModelInfo>(request.post('/models/upload', form))
 }
 
-export function activateModel(id: number) {
-  return unwrap<ModelInfo>(request.post(`/models/${id}/activate`))
+export function activateModel(id: number, device?: string) {
+  return unwrap<ModelInfo>(request.post(`/models/${id}/activate`, device ? { device } : undefined))
 }
 
 export function activeModel() {
-  return unwrap<{ active_model: ModelInfo | null; engine_loaded: boolean; device: string; cuda_available: boolean; model_path: string }>(
-    request.get('/models/active'),
-  )
+  return unwrap<ModelEngineState>(request.get('/models/active'))
+}
+
+export function listModelDevices() {
+  return unwrap<ModelEngineState>(request.get('/models/devices'))
+}
+
+export function switchModelDevice(device: string) {
+  return unwrap<ModelEngineState>(request.post('/models/device', { device }))
 }

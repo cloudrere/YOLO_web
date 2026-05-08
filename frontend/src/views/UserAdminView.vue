@@ -23,18 +23,20 @@
     </section>
     <el-card shadow="never" class="panel-card">
       <template #header><div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div></template>
-      <el-table :data="users">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="is_active" label="启用" width="100" />
-        <el-table-column prop="is_superuser" label="超管" width="100" />
-        <el-table-column label="角色">
-          <template #default="{ row }">{{ row.roles.map((role: any) => role.name).join(', ') }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="120">
-          <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">删除</el-button></template>
-        </el-table-column>
-      </el-table>
+      <div class="table-scroll user-table-shell">
+        <el-table :data="users">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="username" label="用户名" />
+          <el-table-column prop="is_active" label="启用" width="100" />
+          <el-table-column prop="is_superuser" label="超管" width="100" />
+          <el-table-column label="角色">
+            <template #default="{ row }">{{ row.roles.map((role: any) => role.name).join(', ') }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">删除</el-button></template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-card>
   </AppLayout>
 </template>

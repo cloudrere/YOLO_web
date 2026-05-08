@@ -15,12 +15,12 @@
         <small>{{ card.desc }}</small>
       </el-card>
     </section>
-    <section class="grid two">
-      <el-card shadow="never" class="panel-card">
+    <section class="grid two chart-grid">
+      <el-card shadow="never" class="panel-card chart-panel">
         <template #header>近 7 日检测趋势</template>
         <div ref="trendEl" class="chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card">
+      <el-card shadow="never" class="panel-card chart-panel">
         <template #header>高频检测类别</template>
         <div ref="classEl" class="chart"></div>
       </el-card>
@@ -38,7 +38,7 @@ const metrics = ref<DashboardMetrics | null>(null)
 const trendEl = ref<HTMLElement | null>(null)
 const classEl = ref<HTMLElement | null>(null)
 const cards = computed(() => [
-  { label: '检测记录总数', value: metrics.value?.total_detections ?? 0, desc: 'DetectionRecord 总量' },
+  { label: '检测记录总数', value: metrics.value?.total_detections ?? 0, desc: '累计完成的检测记录' },
   { label: '图片检测', value: metrics.value?.image_count ?? 0, desc: '单图与批量图片' },
   { label: '视频检测', value: metrics.value?.video_count ?? 0, desc: '异步视频任务' },
   { label: '活跃用户', value: metrics.value?.active_users ?? 0, desc: '可登录账号数' },

@@ -30,6 +30,7 @@ class ImageDetectResponse(BaseModel):
     results: list[DetectionResultOut]
     analysis: AIAnalysisOut
     duration_ms: int
+    result_url: str = ""
 
 
 class BatchItemResponse(BaseModel):
@@ -39,6 +40,7 @@ class BatchItemResponse(BaseModel):
     results: list[DetectionResultOut] = []
     analysis: AIAnalysisOut | None = None
     error: str = ""
+    result_url: str = ""
 
 
 class BatchDetectResponse(BaseModel):

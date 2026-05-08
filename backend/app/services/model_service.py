@@ -47,14 +47,16 @@ def upload_model(db: Session, file: UploadFile, name: str | None = None, version
     return item
 
 
-def activate_model(db: Session, model_id: int) -> ModelInfo:
+def activate_model(db: Session, model_id: int, device: str | None = None) -> ModelInfo:
     item = db.get(ModelInfo, model_id)
     if item is None:
         raise AppException(40403, "Model not found", 404)
-    yolo_engine.switch_model(item.path)
+    requested_device = device or item.device or settings.yolo_device
+    yolo_engine.switch_model(item.path, device=requested_device)
+    yolo_engine.warmup()
     db.query(ModelInfo).update({ModelInfo.is_active: False})
     item.is_active = True
-    item.device = yolo_engine.device
+    item.device = yolo_engine.requested_device
     item.class_names_json = json.dumps(yolo_engine.class_names, ensure_ascii=False)
     db.commit()
     db.refresh(item)
@@ -66,12 +68,31 @@ def ensure_active_model_loaded(db: Session) -> ModelInfo:
     if active is None:
         raise AppException(40003, "No active model configured")
     if not yolo_engine.is_loaded or yolo_engine.model_path != active.path:
-        yolo_engine.load_model(active.path)
-        active.device = yolo_engine.device
+        yolo_engine.load_model(active.path, device=active.device or settings.yolo_device)
+        yolo_engine.warmup()
+        active.device = yolo_engine.requested_device
         active.class_names_json = json.dumps(yolo_engine.class_names, ensure_ascii=False)
         db.commit()
     return active
 
 
+def switch_active_device(db: Session, device: str) -> dict:
+    active = get_active_model(db)
+    if active is None:
+        raise AppException(40003, "No active model configured")
+    if not yolo_engine.is_loaded or yolo_engine.model_path != active.path:
+        yolo_engine.load_model(active.path, device=device)
+    else:
+        yolo_engine.set_device(device)
+    yolo_engine.warmup()
+    active.device = yolo_engine.requested_device
+    db.commit()
+    return active_model_state(db)
+
+
 def active_model_state(db: Session) -> dict:
     return {"active_model": get_active_model(db), **yolo_engine.state()}
+
+
+def device_state() -> dict:
+    return yolo_engine.state()

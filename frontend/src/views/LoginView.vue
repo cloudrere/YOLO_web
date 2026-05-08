@@ -1,9 +1,9 @@
 <template>
   <div class="login-page">
     <section class="login-hero zh-hero">
-      <span class="eyebrow">通用目标检测平台模板</span>
+      <span class="eyebrow">目标检测工作台</span>
       <h1>YOLO 视觉检测中台</h1>
-      <p>面向图片、批量图片与视频的可复用检测系统。模型驱动、权限完备、结果可追溯，不绑定任何具体业务类别。</p>
+      <p>面向图片、视频与实时流的智能检测系统。模型驱动、权限完备、结果可追溯，快速连接你的 YOLO 检测模型。</p>
       <div class="hero-stats">
         <div><strong>YOLOv8</strong><span>工程化封装</span></div>
         <div><strong>RBAC</strong><span>权限体系</span></div>

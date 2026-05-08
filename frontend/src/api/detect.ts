@@ -6,10 +6,19 @@ export interface ImageDetectResult {
   results: DetectionResult[]
   analysis: AIAnalysis
   duration_ms: number
+  result_url: string
 }
 
 export interface BatchDetectResult {
-  items: Array<{ file_name: string; status: string; record_id: number | null; results: DetectionResult[]; analysis?: AIAnalysis; error: string }>
+  items: Array<{
+    file_name: string
+    status: string
+    record_id: number | null
+    results: DetectionResult[]
+    analysis?: AIAnalysis
+    error: string
+    result_url: string
+  }>
 }
 
 export function detectImage(file: File) {
@@ -34,8 +43,27 @@ export function getTask(taskId: number) {
   return unwrap<TaskInfo>(request.get(`/detect/tasks/${taskId}`))
 }
 
-export function videoStreamUrl(taskId: number) {
-  const base = import.meta.env.VITE_API_BASE || '/api'
+export function withToken(path: string) {
   const token = encodeURIComponent(localStorage.getItem('access_token') || '')
-  return `${base}/detect/video/stream/${taskId}?token=${token}`
+  const separator = path.includes('?') ? '&' : '?'
+  return `${path}${separator}token=${token}`
+}
+
+export function apiMediaUrl(path: string) {
+  const base = import.meta.env.VITE_API_BASE || '/api'
+  const normalizedPath = path.startsWith('/api') ? path.slice(4) : path
+  return withToken(`${base}${normalizedPath}`)
+}
+
+export function artifactUrl(recordId: number) {
+  return apiMediaUrl(`/detect/artifacts/${recordId}`)
+}
+
+export function videoStreamUrl(taskId: number) {
+  return apiMediaUrl(`/detect/video/stream/${taskId}`)
+}
+
+export function realtimeStreamUrl(source: string) {
+  const encodedSource = encodeURIComponent(source || '0')
+  return apiMediaUrl(`/detect/realtime/stream?source=${encodedSource}`)
 }
