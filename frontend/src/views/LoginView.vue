@@ -1,6 +1,6 @@
 <template>
   <div class="login-page">
-    <section class="login-hero zh-hero">
+    <section class="login-hero">
       <span class="eyebrow">目标检测工作台</span>
       <h1>YOLO 视觉检测系统</h1>
       <p>面向图片、视频与实时流的智能检测系统。模型驱动、权限完备、结果可追溯，快速连接你的 YOLO 检测模型。</p>
