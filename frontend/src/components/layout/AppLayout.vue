@@ -4,7 +4,7 @@
       <div class="brand">
         <div class="brand-mark">检</div>
         <div>
-          <strong>YOLO 视觉中台</strong>
+          <strong>YOLO 视觉检测系统</strong>
           <span>智能检测工作台</span>
         </div>
       </div>
@@ -22,6 +22,7 @@
       <div class="sidebar-footer">
         <span>运行模式</span>
         <strong>本地推理</strong>
+        <small>{{ currentTime }}</small>
       </div>
     </aside>
     <main class="main">
@@ -42,13 +43,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const currentTime = ref(formatCurrentTime())
+let clockTimer: number | undefined
 const pageMeta: Record<string, { title: string; subtitle: string; breadcrumb: string }> = {
   '/dashboard': { title: '数据总览', subtitle: '集中展示检测量、用户统计、系统资源与类别分布趋势。', breadcrumb: '总览' },
   '/training-analysis': { title: '训练分析', subtitle: '解析 YOLO results.csv，查看训练曲线、最终指标和 AI 诊断建议。', breadcrumb: '训练分析' },
@@ -69,6 +72,27 @@ const activeMenuPath = computed(() => (route.path.startsWith('/detect') ? '/dete
 const title = computed(() => meta.value.title)
 const subtitle = computed(() => meta.value.subtitle)
 const breadcrumb = computed(() => meta.value.breadcrumb)
+function formatCurrentTime() {
+  return new Date().toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+onMounted(() => {
+  clockTimer = window.setInterval(() => {
+    currentTime.value = formatCurrentTime()
+  }, 1000)
+})
+onUnmounted(() => {
+  if (clockTimer) {
+    window.clearInterval(clockTimer)
+  }
+})
 function logout() {
   auth.logout()
   router.push('/login')
