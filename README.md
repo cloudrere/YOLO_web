@@ -1,33 +1,38 @@
 # 工业级可复用 YOLO 视觉检测 Web 系统模板
 
-这是一个中文化、通用化的 YOLOv8 目标检测 Web 系统模板，面向任意目标检测任务。系统不绑定车辆、鱼类、工业缺陷等具体业务，不写死类别，替换模型即可复用到新项目。
+这是一个中文化、通用化的 YOLOv8 目标检测 Web 系统模板，面向任意目标检测任务。系统不绑定车辆、鱼类、工业缺陷等具体业务，替换模型即可复用到新项目。
 
 ## 功能特性
 
-- YOLOv8 工程化封装：单例加载、GPU/CPU 自动切换、模型热切换、线程安全推理
-- 检测入口：单张图片、批量图片、视频异步任务
-- 权限系统：JWT 登录、用户、角色、权限码、RBAC 路由守卫
-- 数据管理：检测记录与检测结果拆表存储，支持历史查询和删除
-- 模型管理：上传模型、登记模型路径、激活模型、查看推理设备
-- 日志中心：记录登录、检测、模型切换和任务事件
-- Dashboard：总检测数、图片/视频数量、活跃用户、7 日趋势、高频类别
-- AI 分析：基于真实检测结果 JSON 做统计总结、类别分布和异常提示
-- 中文前端：Vue3 + Element Plus + ECharts，工业风检测中台布局
+- YOLOv8 工程化封装：单例加载、GPU/CPU/自动设备切换、模型热切换、线程安全推理
+- 检测入口：单张图片、批量图片、视频异步任务、实时视频流
+- 检测参数：置信度、IoU 阈值、上传到历史记录或仅本地检测
+- 检测展示：原图与检测图对比、英文类别与中文类别同时显示、结果表格与 AI 统计分析
+- 任务控制：批量图片、视频文件、实时视频流支持开始、暂停/继续、结束
+- 权限系统：登录、注册、简单忘记密码、JWT、用户、角色、权限码、RBAC 路由守卫
+- Dashboard：基础检测统计；管理员额外查看总用户数、用户检测统计、模型数、异常日志数、AI 调用次数、CPU/内存/GPU/温度状态
+- 历史管理：缩略图、检测详情、中文类别查询、用户查询、Excel 报表导出
+- 模型管理：上传模型、登记模型路径、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护
+- 日志中心：级别、模块、类型支持中文显示，同时保留英文字段
+- AI 助手：独立 DeepSeek/OpenAI 兼容问答模块，不影响检测主流程
+- 中文前端：Vue3 + Element Plus + ECharts，工业检测中台风格与响应式布局
 
 ## 技术栈
 
-- 后端：FastAPI、SQLAlchemy、SQLite、JWT、RBAC、Ultralytics YOLOv8、OpenCV
+- 后端：FastAPI、SQLAlchemy、SQLite、JWT、RBAC、Ultralytics YOLOv8、OpenCV、Pillow、Torch
 - 前端：Vue3、Vite、TypeScript、Pinia、Vue Router、Axios、Element Plus、ECharts
-- 任务：进程内后台队列，支持 `pending/running/done/failed`、失败重试、视频异步处理
+- 任务：进程内后台队列，支持 `pending/running/paused/cancelled/done/failed`、失败重试、视频异步处理
+- 报表与状态：openpyxl、psutil、httpx、nvidia-ml-py
 
 ## 目录结构
 
 ```text
 backend/
   app/
-    api/          # 认证、检测、历史、模型、管理、日志、仪表盘接口
+    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、AI助手接口
+    constants/    # COCO 类别中英文字典
     core/         # YOLO 引擎、推理服务、任务队列、依赖、配置
-    db/           # 数据库连接和初始化
+    db/           # 数据库连接、初始化和轻量 schema patch
     models/       # SQLAlchemy ORM
     schemas/      # Pydantic DTO
     services/     # 业务服务
@@ -41,13 +46,13 @@ frontend/
     views/        # 页面
 storage/
   uploads/        # 上传文件
-  results/        # 检测结果和视频帧
+  results/        # 检测结果、临时结果和视频帧
   models/         # YOLO 模型文件
 ```
 
 ## 后端启动
 
-当前项目建议使用你的 Anaconda `ultralytics` 环境：
+当前项目建议使用 Anaconda `ultralytics` 环境，依赖也安装到该环境中：
 
 ```bash
 cd E:/DeepLearning/yolo_web/backend
@@ -88,6 +93,26 @@ npm run dev
 
 前端地址：`http://localhost:5173`
 
+## 配置说明
+
+后端 `.env` 主要配置：
+
+```env
+DATABASE_URL=sqlite:///./yolo_web.db
+SECRET_KEY=please-change-me
+YOLO_DEVICE=auto
+CONFIDENCE_THRESHOLD=0.25
+IOU_THRESHOLD=0.7
+STREAM_FRAME_TIMEOUT_SECONDS=30
+MAX_UPLOAD_MB=512
+AI_ASSISTANT_BASE_URL=
+AI_ASSISTANT_API_KEY=
+AI_ASSISTANT_MODEL=deepseek-chat
+AI_ASSISTANT_TIMEOUT_SECONDS=30
+```
+
+AI 助手使用 OpenAI 兼容的 `/chat/completions` 接口。没有配置 `AI_ASSISTANT_API_KEY` 时，前端会显示“未配置”，检测主流程不受影响。
+
 ## 模型使用
 
 把 YOLOv8 模型文件放到：
@@ -102,37 +127,44 @@ storage/models/
 yolov8n.pt
 ```
 
-也可以直接上传 `.pt` 模型文件。激活模型后，后端会通过 `YoloEngine` 热切换当前模型。
+也可以直接上传 `.pt` 模型文件。激活模型后，后端会通过 `YoloEngine` 热切换当前模型。模型显示名称只影响 UI 展示，不修改模型文件和后端模型名称。
 
-## 统一 API 响应契约
+## 类别中英映射
 
-所有业务接口返回：
+后端内置 YOLOv8 COCO 80 类英文到中文默认字典，位置：
 
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {}
-}
+```text
+backend/app/constants/coco_classes.py
 ```
 
-检测结果严格返回：
+模型管理页会读取模型类别，支持手动维护中文名称。后端数据库字段继续保存英文类别，API 额外返回中文字段，例如：
 
 ```json
 {
-  "class": "string",
+  "class": "person",
+  "class_zh": "人",
   "confidence": 0.95,
   "bbox": [0, 0, 100, 100]
 }
 ```
 
-内部数据库字段使用 `class_name`，API 输出转换为 `class`，避免 Python 保留字冲突。
+## 检测参数与保存策略
+
+单图、批量和视频接口都支持：
+
+- `confidence`：置信度阈值
+- `iou`：IoU 阈值
+- `save_history`：是否写入历史记录
+
+`save_history=true` 时，系统写入数据库并保存原图、检测图；`save_history=false` 时，只保存临时预览文件，不写历史表，适合临时调参。
 
 ## 核心接口
 
 ### 认证
 
 - `POST /api/auth/login`：登录
+- `POST /api/auth/register`：注册普通用户
+- `POST /api/auth/reset-password`：按用户名简单重置密码
 - `GET /api/auth/me`：当前用户
 - `POST /api/auth/logout`：退出
 
@@ -142,11 +174,16 @@ yolov8n.pt
 - `POST /api/detect/batch`：批量图片检测
 - `POST /api/detect/video`：创建视频检测任务
 - `GET /api/detect/tasks/{task_id}`：查询任务状态
-- `GET /api/detect/video/stream/{task_id}`：MJPEG 帧流
+- `POST /api/detect/tasks/{task_id}/{pause|resume|cancel|end}`：控制任务
+- `GET /api/detect/artifacts/{record_id}?kind=original|result`：历史原图或检测图
+- `GET /api/detect/temp/{name}`：仅本地检测的临时预览文件
+- `GET /api/detect/video/stream/{task_id}`：视频 MJPEG 帧流
+- `GET /api/detect/realtime/stream`：实时视频流检测
 
 ### 历史
 
-- `GET /api/history`：分页查询检测历史
+- `GET /api/history`：分页查询检测历史，支持来源、英文类别、中文类别、用户筛选
+- `GET /api/history/export`：按当前筛选条件导出 Excel
 - `GET /api/history/{record_id}`：检测详情
 - `DELETE /api/history/{record_id}`：删除检测记录
 - `DELETE /api/history/batch/delete`：批量删除
@@ -157,16 +194,23 @@ yolov8n.pt
 - `POST /api/models`：登记模型路径
 - `POST /api/models/upload`：上传模型
 - `POST /api/models/{model_id}/activate`：激活模型
+- `PATCH /api/models/{model_id}/display-name`：修改显示名称
+- `PATCH /api/models/{model_id}/class-mapping`：保存类别中文映射
+- `DELETE /api/models/{model_id}`：删除非激活模型
 - `GET /api/models/active`：当前模型状态
+- `GET /api/models/devices`：可用推理设备
+- `POST /api/models/device`：切换当前激活模型设备
 
-### 管理、日志、仪表盘
+### 管理、日志、仪表盘、AI 助手
 
-- `GET /api/admin/users`
-- `POST /api/admin/users`
-- `GET /api/admin/roles`
-- `GET /api/admin/permissions`
-- `GET /api/logs`
-- `GET /api/dashboard/metrics`
+- `GET /api/admin/users?keyword=`：用户查询
+- `POST /api/admin/users`：创建用户
+- `GET /api/admin/roles`：角色列表
+- `GET /api/admin/permissions`：权限列表
+- `GET /api/logs`：日志列表，支持中文级别/模块/类型查询
+- `GET /api/dashboard/metrics`：统计指标和管理员系统状态
+- `GET /api/assistant/status`：AI 助手配置状态
+- `POST /api/assistant/chat`：AI 助手问答
 
 ## RBAC 权限码
 
@@ -177,6 +221,20 @@ yolov8n.pt
 - `model:manage`：管理模型
 - `log:read`：查看日志
 - `admin:user`：用户与角色管理
+- `assistant:use`：使用 AI 助手
+
+## 验证命令
+
+```bash
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m compileall backend/app
+npm --prefix frontend run build
+```
+
+如需安装后端新增依赖：
+
+```bash
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r backend/requirements.txt
+```
 
 ## 生产扩展建议
 
@@ -184,5 +242,6 @@ yolov8n.pt
 - 进程内任务队列替换为 Redis + Celery/RQ
 - 本地 `storage/` 替换为对象存储
 - YOLO 推理服务可独立部署为 GPU worker
-- 为大视频增加大小限制、并发限制、任务取消和断点续处理
+- 为大视频增加并发限制、分片处理和断点续处理
 - 使用 Alembic 管理数据库迁移
+- 注册和忘记密码接入邮箱、短信或管理员审批流程

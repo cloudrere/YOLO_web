@@ -6,6 +6,7 @@ export interface ApiResponse<T> {
 
 export interface DetectionResult {
   class: string
+  class_zh?: string
   confidence: number
   bbox: [number, number, number, number]
   frame_id?: number | null
@@ -13,7 +14,7 @@ export interface DetectionResult {
 
 export interface AIAnalysis {
   summary: string
-  class_distribution: Array<{ class: string; count: number; avg_confidence: number; ratio: number }>
+  class_distribution: Array<{ class: string; class_zh?: string; count: number; avg_confidence: number; ratio: number }>
   anomaly_tips: string[]
 }
 
@@ -42,10 +43,13 @@ export interface Permission {
 export interface ModelInfo {
   id: number
   name: string
+  display_name: string
   path: string
   version: string
   class_names_json: string
+  class_mapping_json: string
   is_active: boolean
+  is_deleted: boolean
   device: string
   created_at: string
   updated_at: string
@@ -68,6 +72,7 @@ export interface ModelEngineState {
   cuda_available: boolean
   cuda_name: string
   model_path: string
+  class_names?: string[]
   warmup_status: string
   warmup_error: string
 }
@@ -75,8 +80,9 @@ export interface ModelEngineState {
 export interface TaskInfo {
   id: number
   type: string
-  status: 'pending' | 'running' | 'done' | 'failed'
+  status: 'pending' | 'running' | 'paused' | 'cancelled' | 'done' | 'failed'
   progress: number
+  user_id?: number | null
   record_id: number | null
   result_json: string
   retry_count: number

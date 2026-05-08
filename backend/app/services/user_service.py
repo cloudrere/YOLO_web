@@ -6,8 +6,10 @@ from app.models.role import Role
 from app.models.user import User
 
 
-def list_users(db: Session) -> tuple[list[User], int]:
+def list_users(db: Session, keyword: str | None = None) -> tuple[list[User], int]:
     query = db.query(User).options(selectinload(User.roles).selectinload(Role.permissions)).order_by(User.id.asc())
+    if keyword:
+        query = query.filter(User.username.contains(keyword.strip()))
     return query.all(), query.count()
 
 

@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
+from app.constants.coco_classes import default_class_mapping
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.db.session import Base, engine
-from app.models import ModelInfo, Permission, Role, User
+from app.models import ClassNameMapping, ModelInfo, Permission, Role, User
 
 PERMISSIONS = [
     ("detect:run", "Run detection", "Upload and run image or video detection"),
@@ -15,11 +17,45 @@ PERMISSIONS = [
     ("model:manage", "Manage models", "Upload, register, and activate models"),
     ("log:read", "Read logs", "Read system logs"),
     ("admin:user", "Manage users", "Manage users, roles, and permissions"),
+    ("assistant:use", "Use AI assistant", "Ask questions in the independent AI assistant"),
 ]
 
 
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
+    patch_existing_schema()
+
+
+def patch_existing_schema() -> None:
+    inspector = inspect(engine)
+    if not engine.url.drivername.startswith("sqlite"):
+        return
+    patches = {
+        "model_infos": {
+            "display_name": "VARCHAR DEFAULT '' NOT NULL",
+            "class_mapping_json": "TEXT DEFAULT '{}' NOT NULL",
+            "is_deleted": "BOOLEAN DEFAULT 0 NOT NULL",
+        },
+        "detection_records": {
+            "original_path": "VARCHAR DEFAULT '' NOT NULL",
+            "confidence_threshold": "FLOAT DEFAULT 0.25 NOT NULL",
+            "iou_threshold": "FLOAT DEFAULT 0.7 NOT NULL",
+            "save_history": "BOOLEAN DEFAULT 1 NOT NULL",
+            "model_name": "VARCHAR DEFAULT '' NOT NULL",
+            "device": "VARCHAR DEFAULT '' NOT NULL",
+        },
+        "detection_results": {
+            "class_name_zh": "VARCHAR DEFAULT '' NOT NULL",
+        },
+    }
+    with engine.begin() as connection:
+        for table_name, columns in patches.items():
+            if table_name not in inspector.get_table_names():
+                continue
+            existing = {column["name"] for column in inspector.get_columns(table_name)}
+            for column_name, definition in columns.items():
+                if column_name not in existing:
+                    connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}"))
 
 
 def ensure_storage_dirs() -> None:
@@ -50,7 +86,7 @@ def init_roles(db: Session, permissions: list[Permission]) -> Role:
     if operator_role is None:
         operator_role = Role(name="operator", description="Detection operator")
         db.add(operator_role)
-    operator_role.permissions = [p for p in permissions if p.code in {"detect:run", "history:read", "model:read"}]
+    operator_role.permissions = [p for p in permissions if p.code in {"detect:run", "history:read", "model:read", "assistant:use"}]
     db.flush()
     return admin_role
 
@@ -82,10 +118,20 @@ def init_default_model(db: Session) -> None:
         db.add(ModelInfo(name=model_path.stem, path=str(model_path), is_active=True))
 
 
+def init_default_classes(db: Session) -> None:
+    for class_name, class_name_zh in default_class_mapping().items():
+        existing = db.query(ClassNameMapping).filter(ClassNameMapping.model_id.is_(None), ClassNameMapping.class_name == class_name).first()
+        if existing is None:
+            db.add(ClassNameMapping(model_id=None, class_name=class_name, class_name_zh=class_name_zh))
+        elif not existing.class_name_zh:
+            existing.class_name_zh = class_name_zh
+
+
 def init_db(db: Session) -> None:
     ensure_storage_dirs()
     permissions = init_permissions(db)
     admin_role = init_roles(db, permissions)
     init_admin_user(db, admin_role)
     init_default_model(db)
+    init_default_classes(db)
     db.commit()

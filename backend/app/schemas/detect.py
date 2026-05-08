@@ -7,6 +7,7 @@ class DetectionResultOut(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     class_name: str = Field(serialization_alias="class", alias="class")
+    class_zh: str = ""
     confidence: float
     bbox: tuple[float, float, float, float]
     frame_id: int | None = None
@@ -14,6 +15,7 @@ class DetectionResultOut(BaseModel):
 
 class ClassDistributionItem(BaseModel):
     class_name: str = Field(serialization_alias="class", alias="class")
+    class_zh: str = ""
     count: int
     avg_confidence: float
     ratio: float

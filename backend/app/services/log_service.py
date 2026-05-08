@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.system_log import SystemLog
+from app.services.log_i18n_service import normalize_level, normalize_module, normalize_type
 
 
 def create_log(
@@ -29,11 +30,11 @@ def list_logs(
 ) -> tuple[list[SystemLog], int]:
     query = db.query(SystemLog)
     if level:
-        query = query.filter(SystemLog.level == level)
+        query = query.filter(SystemLog.level == normalize_level(level))
     if module:
-        query = query.filter(SystemLog.module == module)
+        query = query.filter(SystemLog.module == normalize_module(module))
     if log_type:
-        query = query.filter(SystemLog.type == log_type)
+        query = query.filter(SystemLog.type == normalize_type(log_type))
     total = query.count()
     items = query.order_by(SystemLog.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
     return items, total

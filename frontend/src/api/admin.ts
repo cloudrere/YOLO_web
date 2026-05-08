@@ -1,8 +1,8 @@
 import { request, unwrap } from './request'
 import type { Permission, Role, User } from './types'
 
-export function listUsers() {
-  return unwrap<{ items: User[]; total: number }>(request.get('/admin/users'))
+export function listUsers(keyword = '') {
+  return unwrap<{ items: User[]; total: number }>(request.get('/admin/users', { params: { keyword } }))
 }
 
 export function createUser(payload: { username: string; password: string; is_active: boolean; is_superuser: boolean; role_ids: number[] }) {

@@ -7,6 +7,7 @@ import HistoryView from '@/views/HistoryView.vue'
 import ModelManagementView from '@/views/ModelManagementView.vue'
 import LogsView from '@/views/LogsView.vue'
 import UserAdminView from '@/views/UserAdminView.vue'
+import AssistantView from '@/views/AssistantView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: '/models', component: ModelManagementView, meta: { permission: 'model:read' } },
     { path: '/logs', component: LogsView, meta: { permission: 'log:read' } },
     { path: '/admin/users', component: UserAdminView, meta: { permission: 'admin:user' } },
+    { path: '/assistant', component: AssistantView, meta: { permission: 'assistant:use' } },
   ],
 })
 

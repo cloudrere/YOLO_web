@@ -5,8 +5,8 @@ from app.core.deps import get_current_user
 from app.core.response import success
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, UserOut
-from app.services.auth_service import collect_permissions, login
+from app.schemas.auth import LoginRequest, RegisterRequest, ResetPasswordRequest, UserOut
+from app.services.auth_service import collect_permissions, login, register_user, reset_password
 from app.services.log_service import create_log
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -18,6 +18,20 @@ def login_api(payload: LoginRequest, db: Session = Depends(get_db)):
     create_log(db, "auth", f"User {payload.username} logged in", module="auth", user_id=data["user"].id)
     data["user"] = UserOut.model_validate(data["user"]).model_dump()
     return success(data)
+
+
+@router.post("/register")
+def register_api(payload: RegisterRequest, db: Session = Depends(get_db)):
+    user = register_user(db, payload.username, payload.password)
+    create_log(db, "auth", f"User {payload.username} registered", module="auth", user_id=user.id)
+    return success(UserOut.model_validate(user).model_dump(), "registered")
+
+
+@router.post("/reset-password")
+def reset_password_api(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    user = reset_password(db, payload.username, payload.new_password)
+    create_log(db, "auth", f"Password reset for user {payload.username}", module="auth", user_id=user.id)
+    return success({"username": user.username}, "password reset")
 
 
 @router.get("/me")

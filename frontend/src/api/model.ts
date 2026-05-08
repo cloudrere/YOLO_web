@@ -32,3 +32,15 @@ export function listModelDevices() {
 export function switchModelDevice(device: string) {
   return unwrap<ModelEngineState>(request.post('/models/device', { device }))
 }
+
+export function updateModelDisplayName(id: number, displayName: string) {
+  return unwrap<ModelInfo>(request.patch(`/models/${id}/display-name`, { display_name: displayName }))
+}
+
+export function updateModelClassMapping(id: number, mapping: Record<string, string>) {
+  return unwrap<ModelInfo>(request.patch(`/models/${id}/class-mapping`, { mapping }))
+}
+
+export function deleteModel(id: number) {
+  return unwrap<{ deleted: boolean }>(request.delete(`/models/${id}`))
+}

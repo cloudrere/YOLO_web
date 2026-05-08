@@ -9,10 +9,13 @@ class ModelOut(BaseModel):
 
     id: int
     name: str
+    display_name: str = ""
     path: str
     version: str
     class_names_json: str
+    class_mapping_json: str = "{}"
     is_active: bool
+    is_deleted: bool = False
     device: str
     created_at: datetime
     updated_at: datetime
@@ -27,6 +30,14 @@ class ModelCreateRequest(BaseModel):
 
 class DeviceSwitchRequest(BaseModel):
     device: str
+
+
+class ModelDisplayNameRequest(BaseModel):
+    display_name: str
+
+
+class ClassMappingUpdateRequest(BaseModel):
+    mapping: dict[str, str]
 
 
 class DeviceOptionOut(BaseModel):

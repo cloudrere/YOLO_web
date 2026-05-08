@@ -37,10 +37,15 @@ def create_user(
     is_active: bool = True,
     is_superuser: bool = False,
     role_ids: list[int] | None = None,
+    role_names: list[str] | None = None,
 ) -> User:
     if db.query(User).filter(User.username == username).first() is not None:
         raise AppException(40010, "Username already exists")
-    roles = db.query(Role).filter(Role.id.in_(role_ids or [])).all() if role_ids else []
+    roles = []
+    if role_ids:
+        roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
+    elif role_names:
+        roles = db.query(Role).filter(Role.name.in_(role_names)).all()
     user = User(
         username=username,
         password_hash=get_password_hash(password),
@@ -49,6 +54,20 @@ def create_user(
         roles=roles,
     )
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def register_user(db: Session, username: str, password: str) -> User:
+    return create_user(db, username, password, True, False, role_names=["operator"])
+
+
+def reset_password(db: Session, username: str, new_password: str) -> User:
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise AppException(40401, "User not found", 404)
+    user.password_hash = get_password_hash(new_password)
     db.commit()
     db.refresh(user)
     return user

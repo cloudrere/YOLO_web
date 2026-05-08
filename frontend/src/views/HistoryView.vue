@@ -4,7 +4,10 @@
       <template #header>
         <div class="toolbar">
           <span>检测历史</span>
-          <el-button @click="load">刷新</el-button>
+          <div class="form-actions">
+            <el-button @click="exportRows">导出 Excel</el-button>
+            <el-button @click="load">刷新</el-button>
+          </div>
         </div>
       </template>
       <el-form :inline="true" :model="filters" class="filter-bar">
@@ -15,16 +18,38 @@
             <el-option label="视频" value="video" />
           </el-select>
         </el-form-item>
-        <el-form-item label="类别">
-          <el-input v-model="filters.class_name" clearable placeholder="输入类别名" />
+        <el-form-item label="英文类别">
+          <el-input v-model="filters.class_name" clearable placeholder="person / car" />
+        </el-form-item>
+        <el-form-item label="中文类别">
+          <el-input v-model="filters.class_name_zh" clearable placeholder="人 / 汽车" />
+        </el-form-item>
+        <el-form-item label="用户">
+          <el-input v-model="filters.username" clearable placeholder="用户名" />
         </el-form-item>
         <el-button type="primary" @click="load">查询</el-button>
       </el-form>
-      <div class="table-scroll">
+      <div class="table-scroll history-table-shell">
         <el-table :data="rows" @row-click="openDetail">
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="source_type" label="来源" width="130" />
-          <el-table-column prop="file_name" label="文件名" />
+          <el-table-column label="缩略图" width="180">
+            <template #default="{ row }">
+              <div class="thumb-pair">
+                <img v-if="row.original_url" :src="mediaUrl(row.original_url)" alt="原图" />
+                <img v-if="row.result_url" :src="mediaUrl(row.result_url)" alt="检测图" />
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="source_type" label="来源" width="120" />
+          <el-table-column prop="username" label="用户" width="120" />
+          <el-table-column prop="file_name" label="文件名" min-width="180" />
+          <el-table-column label="类别" min-width="180">
+            <template #default="{ row }">
+              <el-tag v-for="item in row.classes" :key="`${item.class}-${item.class_zh}`" class="tag" type="success">
+                {{ item.class_zh || item.class }} {{ item.count }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="100" />
           <el-table-column prop="result_count" label="目标数" width="100" />
           <el-table-column prop="duration_ms" label="耗时(ms)" width="130" />
@@ -38,9 +63,16 @@
       </div>
       <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" @current-change="load" />
     </el-card>
-    <el-drawer v-model="drawer" title="检测详情" size="52%">
-      <div v-if="detail?.result_url" class="media-preview annotated-preview history-preview">
-        <img :src="mediaUrl(detail.result_url)" :alt="detail.file_name" />
+    <el-drawer v-model="drawer" title="检测详情" size="64%">
+      <div v-if="detail" class="detail-meta-grid">
+        <div><span>用户</span><strong>{{ detail.username || detail.user_id || '暂无' }}</strong></div>
+        <div><span>模型</span><strong>{{ detail.model_name || '暂无' }}</strong></div>
+        <div><span>设备</span><strong>{{ detail.device || '暂无' }}</strong></div>
+        <div><span>参数</span><strong>{{ detail.confidence_threshold }} / {{ detail.iou_threshold }}</strong></div>
+      </div>
+      <div v-if="detail?.original_url || detail?.result_url" class="compare-grid history-preview">
+        <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
+        <figure><img v-if="detail.result_url" :src="mediaUrl(detail.result_url)" :alt="detail.file_name" /><figcaption>检测图</figcaption></figure>
       </div>
       <DetectionResultTable :results="detail?.results || []" />
       <AnalysisPanel v-if="detail?.analysis" :analysis="detail.analysis" />
@@ -55,7 +87,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
 import { apiMediaUrl } from '@/api/detect'
-import { deleteHistory, getHistory, listHistory, type HistoryDetail, type HistoryItem } from '@/api/history'
+import { deleteHistory, exportHistory, getHistory, listHistory, type HistoryDetail, type HistoryItem } from '@/api/history'
 
 const rows = ref<HistoryItem[]>([])
 const detail = ref<HistoryDetail | null>(null)
@@ -63,13 +95,16 @@ const drawer = ref(false)
 const total = ref(0)
 const page = ref(1)
 const pageSize = 20
-const filters = reactive({ source_type: '', class_name: '' })
+const filters = reactive({ source_type: '', class_name: '', class_name_zh: '', username: '' })
 
 function mediaUrl(path: string) {
   return apiMediaUrl(path)
 }
+function filterParams() {
+  return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== ''))
+}
 async function load() {
-  const data = await listHistory({ page: page.value, page_size: pageSize, ...filters })
+  const data = await listHistory(filterParams())
   rows.value = data.items
   total.value = data.total
 }
@@ -80,6 +115,15 @@ async function openDetail(row: HistoryItem) {
 async function remove(id: number) {
   await deleteHistory(id)
   await load()
+}
+async function exportRows() {
+  const response = await exportHistory(filterParams())
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '检测历史.xlsx'
+  link.click()
+  URL.revokeObjectURL(url)
 }
 onMounted(load)
 </script>

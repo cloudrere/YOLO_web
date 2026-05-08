@@ -11,5 +11,5 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/metrics")
-def metrics(db: Session = Depends(get_db), _: User = Depends(require_permission("history:read"))):
-    return success(get_metrics(db))
+def metrics(db: Session = Depends(get_db), current_user: User = Depends(require_permission("history:read"))):
+    return success(get_metrics(db, current_user))

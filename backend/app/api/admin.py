@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_permission
@@ -15,8 +15,12 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/users")
-def get_users(db: Session = Depends(get_db), _: User = Depends(require_permission("admin:user"))):
-    items, total = list_users(db)
+def get_users(
+    keyword: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission("admin:user")),
+):
+    items, total = list_users(db, keyword)
     return success({"items": [UserOut.model_validate(item).model_dump() for item in items], "total": total})
 
 

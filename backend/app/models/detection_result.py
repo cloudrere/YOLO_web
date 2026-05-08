@@ -15,6 +15,7 @@ class DetectionResult(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     record_id: Mapped[int] = mapped_column(ForeignKey("detection_records.id", ondelete="CASCADE"), index=True)
     class_name: Mapped[str] = mapped_column(nullable=False, index=True)
+    class_name_zh: Mapped[str] = mapped_column(default="", nullable=False)
     confidence: Mapped[float] = mapped_column(nullable=False)
     x1: Mapped[float] = mapped_column(nullable=False)
     y1: Mapped[float] = mapped_column(nullable=False)

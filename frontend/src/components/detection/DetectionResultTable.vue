@@ -1,7 +1,14 @@
 <template>
   <div class="table-scroll result-table-shell">
     <el-table :data="results" size="small" empty-text="暂无检测目标" class="result-table">
-      <el-table-column prop="class" label="类别" min-width="120" />
+      <el-table-column label="类别" min-width="160">
+        <template #default="{ row }">
+          <div class="class-pair">
+            <strong>{{ row.class_zh || row.class }}</strong>
+            <span>{{ row.class }}</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="confidence" label="置信度" width="170">
         <template #default="{ row }">
           <div class="confidence-cell">

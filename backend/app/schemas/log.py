@@ -8,8 +8,11 @@ class LogOut(BaseModel):
 
     id: int
     type: str
+    type_zh: str = ""
     level: str
+    level_zh: str = ""
     module: str
+    module_zh: str = ""
     message: str
     user_id: int | None
     request_id: str

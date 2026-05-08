@@ -209,10 +209,10 @@ class YoloEngine:
             imgsz=64,
         )
 
-    def predict_image(self, source: Any, conf: float | None = None) -> list[dict[str, Any]]:
-        return self.predict_batch([source], conf=conf)[0]
+    def predict_image(self, source: Any, conf: float | None = None, iou: float | None = None) -> list[dict[str, Any]]:
+        return self.predict_batch([source], conf=conf, iou=iou)[0]
 
-    def predict_batch(self, sources: list[Any], conf: float | None = None) -> list[list[dict[str, Any]]]:
+    def predict_batch(self, sources: list[Any], conf: float | None = None, iou: float | None = None) -> list[list[dict[str, Any]]]:
         if not sources:
             return []
         with self._lock:
@@ -221,6 +221,7 @@ class YoloEngine:
             results = self._model.predict(
                 source=sources,
                 conf=settings.confidence_threshold if conf is None else conf,
+                iou=settings.iou_threshold if iou is None else iou,
                 device=self._device,
                 verbose=False,
             )

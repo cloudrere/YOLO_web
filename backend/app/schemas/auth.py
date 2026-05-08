@@ -38,6 +38,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
+class ResetPasswordRequest(BaseModel):
+    username: str
+    new_password: str
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

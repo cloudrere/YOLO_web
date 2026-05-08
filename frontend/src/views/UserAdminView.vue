@@ -22,13 +22,25 @@
       </el-card>
     </section>
     <el-card shadow="never" class="panel-card">
-      <template #header><div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div></template>
+      <template #header>
+        <div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div>
+      </template>
+      <el-form :inline="true" class="filter-bar">
+        <el-form-item label="用户查询">
+          <el-input v-model="keyword" clearable placeholder="输入用户名关键词" @keyup.enter="load" />
+        </el-form-item>
+        <el-button type="primary" @click="load">查询</el-button>
+      </el-form>
       <div class="table-scroll user-table-shell">
         <el-table :data="users">
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="username" label="用户名" />
-          <el-table-column prop="is_active" label="启用" width="100" />
-          <el-table-column prop="is_superuser" label="超管" width="100" />
+          <el-table-column label="启用" width="100">
+            <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template>
+          </el-table-column>
+          <el-table-column label="超管" width="100">
+            <template #default="{ row }"><el-tag :type="row.is_superuser ? 'danger' : 'info'">{{ row.is_superuser ? '是' : '否' }}</el-tag></template>
+          </el-table-column>
           <el-table-column label="角色">
             <template #default="{ row }">{{ row.roles.map((role: any) => role.name).join(', ') }}</template>
           </el-table-column>
@@ -50,9 +62,10 @@ import type { Permission, Role, User } from '@/api/types'
 const users = ref<User[]>([])
 const roles = ref<Role[]>([])
 const permissions = ref<Permission[]>([])
+const keyword = ref('')
 const form = reactive({ username: '', password: '', is_active: true, is_superuser: false, role_ids: [] as number[] })
 async function load() {
-  users.value = (await listUsers()).items
+  users.value = (await listUsers(keyword.value)).items
   roles.value = (await listRoles()).items
   permissions.value = (await listPermissions()).items
 }

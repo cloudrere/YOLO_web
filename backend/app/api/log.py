@@ -8,7 +8,8 @@ from app.core.response import success
 from app.db.session import get_db
 from app.models.system_log import SystemLog
 from app.models.user import User
-from app.schemas.log import LogCleanupRequest, LogOut
+from app.schemas.log import LogCleanupRequest
+from app.services.log_i18n_service import decorate_log
 from app.services.log_service import list_logs
 
 router = APIRouter(prefix="/logs", tags=["logs"])
@@ -27,7 +28,7 @@ def get_logs(
     items, total = list_logs(db, page, page_size, level, module, log_type)
     return success(
         {
-            "items": [LogOut.model_validate(item).model_dump() for item in items],
+            "items": [decorate_log(item) for item in items],
             "total": total,
             "page": page,
             "page_size": page_size,

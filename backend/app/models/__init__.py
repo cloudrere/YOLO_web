@@ -6,6 +6,8 @@ from app.models.detection_record import DetectionRecord
 from app.models.detection_result import DetectionResult
 from app.models.system_log import SystemLog
 from app.models.task import Task
+from app.models.class_name_mapping import ClassNameMapping
+from app.models.ai_chat_log import AIChatLog
 
 __all__ = [
     "User",
@@ -16,6 +18,8 @@ __all__ = [
     "DetectionResult",
     "SystemLog",
     "Task",
+    "ClassNameMapping",
+    "AIChatLog",
     "user_roles",
     "role_permissions",
 ]

@@ -3,7 +3,7 @@
     <section class="model-command-center panel-card">
       <div class="model-command-main">
         <span class="eyebrow dark">模型控制室</span>
-        <h2>{{ active?.active_model?.name || '尚未激活模型' }}</h2>
+        <h2>{{ active?.active_model?.display_name || active?.active_model?.name || '尚未激活模型' }}</h2>
         <p>{{ active?.model_path || '请先上传或登记模型，然后选择推理设备并激活。' }}</p>
       </div>
       <div class="model-command-stats">
@@ -64,7 +64,10 @@
       <div class="table-scroll model-table-shell">
         <el-table :data="models" class="model-table">
           <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="name" label="名称" min-width="150" />
+          <el-table-column prop="display_name" label="显示名称" min-width="150">
+            <template #default="{ row }">{{ row.display_name || row.name }}</template>
+          </el-table-column>
+          <el-table-column prop="name" label="后端名称" min-width="140" />
           <el-table-column prop="version" label="版本" width="120" />
           <el-table-column prop="device" label="上次选择" width="130">
             <template #default="{ row }"><el-tag :type="row.device?.startsWith('cuda') ? 'success' : row.device === 'cpu' ? 'warning' : 'info'">{{ deviceLabel(row.device || 'auto') }}</el-tag></template>
@@ -72,15 +75,43 @@
           <el-table-column prop="is_active" label="状态" width="110">
             <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '运行中' : '未激活' }}</el-tag></template>
           </el-table-column>
-          <el-table-column prop="path" label="路径" min-width="280" />
-          <el-table-column label="操作" width="170">
+          <el-table-column prop="path" label="路径" min-width="260" />
+          <el-table-column label="操作" width="330" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">按当前设备激活</el-button>
+              <div class="form-actions table-actions">
+                <el-button type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
+                <el-button size="small" @click="openDisplayName(row)">改名</el-button>
+                <el-button size="small" @click="openMapping(row)">类别映射</el-button>
+                <el-button type="danger" size="small" :disabled="row.is_active" @click="remove(row.id)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
       </div>
     </el-card>
+
+    <el-dialog v-model="displayDialog" title="修改模型显示名称" width="420px">
+      <el-input v-model="displayNameForm" placeholder="请输入前端显示名称" />
+      <template #footer>
+        <el-button @click="displayDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveDisplayName">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="mappingDrawer" title="类别中英文对照" size="54%">
+      <div class="mapping-toolbar">
+        <span>模型：{{ selectedModel?.display_name || selectedModel?.name }}</span>
+        <el-button type="primary" @click="saveMapping">保存映射</el-button>
+      </div>
+      <div class="table-scroll">
+        <el-table :data="mappingRows">
+          <el-table-column prop="class_name" label="英文类别" min-width="160" />
+          <el-table-column label="中文名称" min-width="220">
+            <template #default="{ row }"><el-input v-model="row.class_zh" /></template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-drawer>
   </AppLayout>
 </template>
 
@@ -88,7 +119,17 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { activateModel, activeModel, listModels, registerModel, switchModelDevice, uploadModel } from '@/api/model'
+import {
+  activateModel,
+  activeModel,
+  deleteModel,
+  listModels,
+  registerModel,
+  switchModelDevice,
+  updateModelClassMapping,
+  updateModelDisplayName,
+  uploadModel,
+} from '@/api/model'
 import type { ModelDeviceInfo, ModelEngineState, ModelInfo } from '@/api/types'
 
 const models = ref<ModelInfo[]>([])
@@ -98,10 +139,15 @@ const activatingId = ref<number | null>(null)
 const switchingDevice = ref(false)
 const selectedDevice = ref('auto')
 const form = reactive({ name: '', path: '', version: '' })
+const displayDialog = ref(false)
+const displayNameForm = ref('')
+const mappingDrawer = ref(false)
+const selectedModel = ref<ModelInfo | null>(null)
+const mappingRows = ref<Array<{ class_name: string; class_zh: string }>>([])
 
 const displayDeviceOptions = computed<ModelDeviceInfo[]>(() => {
   const options = active.value?.available_devices || [{ value: 'auto', label: '自动', type: 'auto', available: true }, { value: 'cpu', label: 'CPU', type: 'cpu', available: true }]
-  return options.map((option) => ({ ...option, label: deviceLabel(option.value) }))
+  return options.map((option) => ({ ...option, label: option.value.startsWith('cuda') ? `${deviceLabel(option.value)} ${option.label}` : deviceLabel(option.value) }))
 })
 const warmupText = computed(() => {
   const status = active.value?.warmup_status || 'idle'
@@ -161,6 +207,42 @@ async function activate(id: number) {
     await load()
   } finally {
     activatingId.value = null
+  }
+}
+function openDisplayName(row: ModelInfo) {
+  selectedModel.value = row
+  displayNameForm.value = row.display_name || row.name
+  displayDialog.value = true
+}
+async function saveDisplayName() {
+  if (!selectedModel.value) return
+  await updateModelDisplayName(selectedModel.value.id, displayNameForm.value)
+  displayDialog.value = false
+  await load()
+}
+function openMapping(row: ModelInfo) {
+  selectedModel.value = row
+  const classNames = parseJson<string[]>(row.class_names_json, [])
+  const mapping = parseJson<Record<string, string>>(row.class_mapping_json, {})
+  mappingRows.value = classNames.map((className) => ({ class_name: className, class_zh: mapping[className] || className }))
+  mappingDrawer.value = true
+}
+async function saveMapping() {
+  if (!selectedModel.value) return
+  const mapping = Object.fromEntries(mappingRows.value.map((row) => [row.class_name, row.class_zh]))
+  await updateModelClassMapping(selectedModel.value.id, mapping)
+  mappingDrawer.value = false
+  await load()
+}
+async function remove(id: number) {
+  await deleteModel(id)
+  await load()
+}
+function parseJson<T>(text: string, fallback: T): T {
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return fallback
   }
 }
 onMounted(load)

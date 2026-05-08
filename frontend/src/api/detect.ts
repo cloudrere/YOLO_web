@@ -1,12 +1,22 @@
 import { request, unwrap } from './request'
 import type { AIAnalysis, DetectionResult, TaskInfo } from './types'
 
+export interface DetectParameters {
+  confidence?: number
+  iou?: number
+  save_history?: boolean
+}
+
 export interface ImageDetectResult {
-  record_id: number
+  record_id: number | null
   results: DetectionResult[]
   analysis: AIAnalysis
   duration_ms: number
+  original_url: string
   result_url: string
+  model_name: string
+  device: string
+  parameters: DetectParameters
 }
 
 export interface BatchDetectResult {
@@ -17,30 +27,47 @@ export interface BatchDetectResult {
     results: DetectionResult[]
     analysis?: AIAnalysis
     error: string
+    original_url: string
     result_url: string
+    duration_ms: number
   }>
+  parameters: DetectParameters
 }
 
-export function detectImage(file: File) {
+function appendParameters(form: FormData, params?: DetectParameters) {
+  if (!params) return
+  if (params.confidence !== undefined) form.append('confidence', String(params.confidence))
+  if (params.iou !== undefined) form.append('iou', String(params.iou))
+  if (params.save_history !== undefined) form.append('save_history', String(params.save_history))
+}
+
+export function detectImage(file: File, params?: DetectParameters) {
   const form = new FormData()
   form.append('file', file)
+  appendParameters(form, params)
   return unwrap<ImageDetectResult>(request.post('/detect/image', form))
 }
 
-export function detectBatch(files: File[]) {
+export function detectBatch(files: File[], params?: DetectParameters) {
   const form = new FormData()
   files.forEach((file) => form.append('files', file))
+  appendParameters(form, params)
   return unwrap<BatchDetectResult>(request.post('/detect/batch', form))
 }
 
-export function detectVideo(file: File) {
+export function detectVideo(file: File, params?: DetectParameters) {
   const form = new FormData()
   form.append('file', file)
-  return unwrap<{ task_id: number; record_id: number; status: string }>(request.post('/detect/video', form))
+  appendParameters(form, params)
+  return unwrap<{ task_id: number; record_id: number; status: string; original_url: string; parameters: DetectParameters }>(request.post('/detect/video', form))
 }
 
 export function getTask(taskId: number) {
   return unwrap<TaskInfo>(request.get(`/detect/tasks/${taskId}`))
+}
+
+export function controlTask(taskId: number, action: 'pause' | 'resume' | 'cancel' | 'end') {
+  return unwrap<TaskInfo>(request.post(`/detect/tasks/${taskId}/${action}`))
 }
 
 export function withToken(path: string) {
@@ -55,15 +82,17 @@ export function apiMediaUrl(path: string) {
   return withToken(`${base}${normalizedPath}`)
 }
 
-export function artifactUrl(recordId: number) {
-  return apiMediaUrl(`/detect/artifacts/${recordId}`)
+export function artifactUrl(recordId: number, kind = 'result') {
+  return apiMediaUrl(`/detect/artifacts/${recordId}?kind=${kind}`)
 }
 
 export function videoStreamUrl(taskId: number) {
   return apiMediaUrl(`/detect/video/stream/${taskId}`)
 }
 
-export function realtimeStreamUrl(source: string) {
-  const encodedSource = encodeURIComponent(source || '0')
-  return apiMediaUrl(`/detect/realtime/stream?source=${encodedSource}`)
+export function realtimeStreamUrl(source: string, params?: DetectParameters) {
+  const query = new URLSearchParams({ source: source || '0' })
+  if (params?.confidence !== undefined) query.set('confidence', String(params.confidence))
+  if (params?.iou !== undefined) query.set('iou', String(params.iou))
+  return apiMediaUrl(`/detect/realtime/stream?${query.toString()}`)
 }

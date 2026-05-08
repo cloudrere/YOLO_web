@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     task_max_retries: int = 2
     stream_frame_timeout_seconds: int = 30
     max_upload_mb: int = 512
+    iou_threshold: float = 0.7
+    ai_assistant_base_url: str = ""
+    ai_assistant_api_key: str = ""
+    ai_assistant_model: str = "deepseek-chat"
+    ai_assistant_timeout_seconds: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

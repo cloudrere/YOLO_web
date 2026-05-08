@@ -57,6 +57,10 @@ class TaskQueue:
                 task.finished_at = utc_now()
                 db.commit()
                 return
+            if task.status == "cancelled":
+                task.finished_at = utc_now()
+                db.commit()
+                return
             task.status = "running"
             task.started_at = utc_now()
             task.error_message = ""
@@ -65,6 +69,12 @@ class TaskQueue:
                 result = handler(task, db)
                 task = db.get(Task, task_id)
                 if task is None:
+                    return
+                if task.status == "cancelled":
+                    task.progress = min(task.progress, 100.0)
+                    task.result_json = json.dumps(result, ensure_ascii=False)
+                    task.finished_at = utc_now()
+                    db.commit()
                     return
                 task.status = "done"
                 task.progress = 100.0
