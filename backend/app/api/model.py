@@ -46,7 +46,7 @@ def upload_model_api(
     name: str | None = Form(None),
     version: str = Form(""),
     db: Session = Depends(get_db),
-    _: User = Depends(require_permission("model:manage")),
+    _: User = Depends(require_permission("model:read")),
 ):
     item = upload_model(db, file, name, version)
     return success(ModelOut.model_validate(item).model_dump(), "uploaded")

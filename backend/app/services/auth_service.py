@@ -39,6 +39,10 @@ def create_user(
     role_ids: list[int] | None = None,
     role_names: list[str] | None = None,
 ) -> User:
+    username = username.strip()
+    password = password.strip()
+    if not username or not password:
+        raise AppException(40010, "Username and password are required")
     if db.query(User).filter(User.username == username).first() is not None:
         raise AppException(40010, "Username already exists")
     roles = []

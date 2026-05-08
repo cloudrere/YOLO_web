@@ -8,7 +8,6 @@
       </div>
       <div class="status-pills">
         <el-tag :type="task ? 'success' : 'info'">{{ task ? `任务 ${task.id}` : '未创建任务' }}</el-tag>
-        <el-tag :type="params.analyze ? 'primary' : 'info'">{{ params.analyze ? 'AI 分析开启' : 'AI 分析关闭' }}</el-tag>
         <el-tag>{{ params.confidence.toFixed(2) }} / {{ params.iou.toFixed(2) }}</el-tag>
       </div>
     </section>
@@ -22,7 +21,6 @@
           <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="running" />
           <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="running" />
-          <el-switch v-model="params.analyze" active-text="开启 AI 分析" inactive-text="关闭 AI 分析" :disabled="running" />
         </div>
         <div class="mode-config">
           <h3>上传视频</h3>
@@ -69,10 +67,8 @@
           <span>任务 ID：{{ task.id }}</span>
         </div>
         <p v-if="task.error_message" class="error-text">{{ task.error_message }}</p>
-        <AnalysisPanel v-if="summary?.analysis" :analysis="summary.analysis" />
-        <el-empty v-else-if="task.status === 'done' && !params.analyze" description="AI 分析未开启，本次视频任务不生成统计分析" />
       </div>
-      <el-empty v-else description="视频任务创建后显示进度和分析结果" />
+      <el-empty v-else description="视频任务创建后显示进度和检测结果" />
     </section>
   </AppLayout>
 </template>
@@ -81,22 +77,20 @@
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
-import { controlTask, detectVideo, getTask, videoStreamUrl, type DetectParameters } from '@/api/detect'
-import type { AIAnalysis, TaskInfo } from '@/api/types'
+import { controlTask, detectVideo, getTask, videoStreamUrl } from '@/api/detect'
+import type { TaskInfo } from '@/api/types'
 
 interface VideoSummary {
   frames_processed?: number
   frames_sampled?: number
   results_count?: number
-  analysis?: AIAnalysis | null
 }
 
 const videoFile = ref<File | null>(null)
 const task = ref<TaskInfo | null>(null)
 const loading = ref(false)
 const errorText = ref('')
-const params = reactive<Required<DetectParameters>>({ confidence: 0.25, iou: 0.7, save_history: true, analyze: false })
+const params = reactive({ confidence: 0.25, iou: 0.7, save_history: true })
 let timer: number | undefined
 
 const running = computed(() => Boolean(task.value && ['pending', 'running', 'paused'].includes(task.value.status)))

@@ -22,7 +22,7 @@
             v-for="option in displayDeviceOptions"
             :key="option.value"
             :type="selectedDevice === option.value ? 'primary' : 'default'"
-            :disabled="!option.available || switchingDevice"
+            :disabled="!option.available || switchingDevice || !canManageModel"
             @click="selectedDevice = option.value"
           >
             {{ option.label }}
@@ -31,8 +31,9 @@
         <div class="device-detail-card" :class="selectedDevice.startsWith('cuda') ? 'gpu' : selectedDevice === 'cpu' ? 'cpu' : 'auto'">
           <strong>{{ deviceLabel(selectedDevice) }}</strong>
           <span>{{ selectedDeviceDescription }}</span>
+          <small v-if="selectedDeviceDetail">{{ selectedDeviceDetail }}</small>
         </div>
-        <el-button class="full" type="primary" :loading="switchingDevice" :disabled="!active?.active_model" @click="switchDevice">
+        <el-button class="full" type="primary" :loading="switchingDevice" :disabled="!active?.active_model || !canManageModel" @click="switchDevice">
           切换并预热
         </el-button>
         <p v-if="active?.warmup_error" class="error-text">{{ active.warmup_error }}</p>
@@ -45,7 +46,7 @@
           <el-form-item label="模型路径"><el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" /></el-form-item>
           <el-form-item label="版本号"><el-input v-model="form.version" placeholder="输入版本标识" /></el-form-item>
           <div class="form-actions">
-            <el-button type="primary" @click="register">登记路径</el-button>
+            <el-button type="primary" :disabled="!canManageModel" @click="register">登记路径</el-button>
           </div>
         </el-form>
         <div class="model-upload-zone">
@@ -85,10 +86,11 @@
           <el-table-column label="操作" width="360" fixed="right">
             <template #default="{ row }">
               <div class="form-actions table-actions wrap-actions">
-                <el-button type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
-                <el-button size="small" @click="openDisplayName(row)">改名</el-button>
-                <el-button size="small" @click="openMapping(row)">类别映射</el-button>
-                <el-button type="danger" size="small" :disabled="row.is_active" @click="remove(row.id)">删除</el-button>
+                <el-button v-if="canManageModel" type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
+                <el-button v-if="canManageModel" size="small" @click="openDisplayName(row)">改名</el-button>
+                <el-button v-if="canManageModel" size="small" @click="openMapping(row)">类别映射</el-button>
+                <el-button v-if="canManageModel" type="danger" size="small" :disabled="row.is_active" @click="remove(row.id)">删除</el-button>
+                <el-tag v-else type="info">仅查看</el-tag>
               </div>
             </template>
           </el-table-column>
@@ -136,8 +138,10 @@ import {
   updateModelDisplayName,
   uploadModel,
 } from '@/api/model'
+import { useAuthStore } from '@/stores/auth'
 import type { ModelDeviceInfo, ModelEngineState, ModelInfo } from '@/api/types'
 
+const auth = useAuthStore()
 const models = ref<ModelInfo[]>([])
 const active = ref<ModelEngineState | null>(null)
 const uploadFileRef = ref<File | null>(null)
@@ -151,9 +155,10 @@ const mappingDrawer = ref(false)
 const selectedModel = ref<ModelInfo | null>(null)
 const mappingRows = ref<Array<{ class_name: string; class_zh: string }>>([])
 
+const canManageModel = computed(() => auth.hasPermission('model:manage'))
 const displayDeviceOptions = computed<ModelDeviceInfo[]>(() => {
   const options = active.value?.available_devices || [{ value: 'auto', label: '自动', type: 'auto', available: true }, { value: 'cpu', label: 'CPU', type: 'cpu', available: true }]
-  return options.map((option) => ({ ...option, label: option.value.startsWith('cuda') ? `${deviceLabel(option.value)} ${option.label}` : deviceLabel(option.value) }))
+  return options.map((option) => ({ ...option, label: deviceLabel(option.value) }))
 })
 const warmupText = computed(() => {
   const status = active.value?.warmup_status || 'idle'
@@ -166,6 +171,12 @@ const warmupText = computed(() => {
     idle: '未初始化',
   }[status] || status
 })
+const selectedDeviceDetail = computed(() => {
+  const option = active.value?.available_devices.find((item) => item.value === selectedDevice.value)
+  if (!option) return ''
+  if (selectedDevice.value.startsWith('cuda')) return `GPU 型号：${option.label || active.value?.cuda_name || selectedDevice.value}`
+  return option.label && option.label !== deviceLabel(option.value) ? option.label : ''
+})
 const selectedDeviceDescription = computed(() => {
   if (selectedDevice.value === 'auto') return '系统自动优先使用可用 GPU，不可用时使用 CPU。'
   if (selectedDevice.value === 'cpu') return '强制使用 CPU，适合调试或显存不足时运行。'
@@ -175,7 +186,7 @@ const selectedDeviceDescription = computed(() => {
 function deviceLabel(value: string) {
   if (!value || value === 'auto') return '自动'
   if (value === 'cpu') return 'CPU'
-  if (value.startsWith('cuda')) return value.toUpperCase()
+  if (value.startsWith('cuda')) return 'GPU'
   return value
 }
 function selectUploadModel(file: UploadFile) {

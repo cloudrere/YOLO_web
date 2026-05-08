@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.auth import PermissionOut, RoleOut, UserOut
 
@@ -11,6 +11,14 @@ class UserCreateRequest(BaseModel):
     is_active: bool = True
     is_superuser: bool = False
     role_ids: list[int] = []
+
+    @field_validator("username", "password")
+    @classmethod
+    def _not_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("cannot be empty")
+        return value
 
 
 class UserUpdateRequest(BaseModel):

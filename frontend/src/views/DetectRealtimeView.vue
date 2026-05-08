@@ -8,7 +8,6 @@
       </div>
       <div class="status-pills">
         <el-tag :type="active ? 'success' : 'info'">{{ active ? '已连接' : '未连接' }}</el-tag>
-        <el-tag type="info">实时流不生成 AI 分析</el-tag>
         <el-tag>{{ params.confidence.toFixed(2) }} / {{ params.iou.toFixed(2) }}</el-tag>
       </div>
     </section>
@@ -69,7 +68,7 @@
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { realtimeStreamUrl, type DetectParameters } from '@/api/detect'
+import { realtimeStreamUrl } from '@/api/detect'
 
 const source = ref('0')
 const streamUrl = ref('')
@@ -78,7 +77,7 @@ const paused = ref(false)
 const startedAt = ref<number | null>(null)
 const tick = ref(0)
 const errorText = ref('')
-const params = reactive<Required<DetectParameters>>({ confidence: 0.25, iou: 0.7, save_history: false, analyze: false })
+const params = reactive({ confidence: 0.25, iou: 0.7 })
 let timer: number | undefined
 
 const elapsed = computed(() => {

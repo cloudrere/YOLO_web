@@ -9,7 +9,6 @@
       <div class="status-pills">
         <el-tag>{{ selectedCount }} 张图片</el-tag>
         <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
-        <el-tag :type="params.analyze ? 'primary' : 'info'">{{ params.analyze ? 'AI 分析开启' : 'AI 分析关闭' }}</el-tag>
       </div>
     </section>
 
@@ -22,7 +21,6 @@
           <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
           <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="loading" />
-          <el-switch v-model="params.analyze" active-text="开启 AI 分析" inactive-text="关闭 AI 分析" :disabled="loading" />
         </div>
         <div class="mode-config">
           <h3>上传批量图片</h3>
@@ -76,7 +74,6 @@
               <el-tag :type="item.status === 'done' ? 'success' : 'danger'">{{ item.status === 'done' ? '已完成' : item.status }}</el-tag>
             </div>
             <DetectionResultTable :results="item.results" />
-            <AnalysisPanel v-if="item.analysis" :analysis="item.analysis" />
           </div>
         </article>
       </div>
@@ -89,9 +86,8 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
-import { apiMediaUrl, detectBatch, type BatchDetectResult, type DetectParameters } from '@/api/detect'
+import { apiMediaUrl, detectBatch, type BatchDetectResult } from '@/api/detect'
 
 const files = ref<File[]>([])
 const result = ref<BatchDetectResult | null>(null)
@@ -100,7 +96,7 @@ const paused = ref(false)
 const ended = ref(false)
 const progress = ref(0)
 const errorText = ref('')
-const params = reactive<Required<DetectParameters>>({ confidence: 0.25, iou: 0.7, save_history: true, analyze: false })
+const params = reactive({ confidence: 0.25, iou: 0.7, save_history: true })
 const selectedCount = computed(() => files.value.length)
 const targetCount = computed(() => result.value?.items.reduce((sum, item) => sum + item.results.length, 0) ?? 0)
 const statusText = computed(() => (loading.value ? (paused.value ? '已暂停' : '检测中') : result.value ? '已完成' : '待上传'))

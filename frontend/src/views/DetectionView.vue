@@ -124,7 +124,6 @@
 
       <template v-if="mode === 'image'">
         <DetectionResultTable :results="imageResult?.results || []" />
-        <AnalysisPanel v-if="imageResult?.analysis" :analysis="imageResult.analysis" />
       </template>
 
       <template v-else-if="mode === 'batch'">
@@ -155,9 +154,8 @@
             <span>任务 ID：{{ task.id }}</span>
           </div>
           <p v-if="task.error_message" class="error-text">{{ task.error_message }}</p>
-          <AnalysisPanel v-if="videoSummary?.analysis" :analysis="videoSummary.analysis" />
         </div>
-        <el-empty v-else description="视频任务创建后显示进度和分析结果" />
+        <el-empty v-else description="视频任务创建后显示进度和检测结果" />
       </template>
 
       <template v-else>
@@ -174,7 +172,6 @@
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import type { UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
 import {
   apiMediaUrl,
@@ -189,7 +186,7 @@ import {
   type DetectParameters,
   type ImageDetectResult,
 } from '@/api/detect'
-import type { AIAnalysis, DetectionResult, TaskInfo } from '@/api/types'
+import type { DetectionResult, TaskInfo } from '@/api/types'
 
 type DetectionMode = 'image' | 'batch' | 'video' | 'realtime'
 
@@ -197,7 +194,6 @@ interface VideoSummary {
   frames_processed?: number
   frames_sampled?: number
   results_count?: number
-  analysis?: AIAnalysis
 }
 
 const mode = ref<DetectionMode>('image')
@@ -232,7 +228,7 @@ const modeMeta = computed(() => {
   const map = {
     image: {
       title: '单图检测与标注预览',
-      description: '上传图片后直接展示原图、检测图、目标数量与 AI 分析。',
+      description: '上传图片后直接展示原图、检测图和目标数量。',
       tag: '图片模式',
       previewLabel: '原图 / 检测图',
       empty: '上传单张图片后显示对比图',

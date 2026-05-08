@@ -1,17 +1,15 @@
 import { request, unwrap } from './request'
-import type { AIAnalysis, DetectionResult, TaskInfo } from './types'
+import type { DetectionResult, TaskInfo } from './types'
 
 export interface DetectParameters {
   confidence?: number
   iou?: number
   save_history?: boolean
-  analyze?: boolean
 }
 
 export interface ImageDetectResult {
   record_id: number | null
   results: DetectionResult[]
-  analysis: AIAnalysis | null
   duration_ms: number
   original_url: string
   result_url: string
@@ -26,7 +24,6 @@ export interface BatchDetectResult {
     status: string
     record_id: number | null
     results: DetectionResult[]
-    analysis?: AIAnalysis | null
     error: string
     original_url: string
     result_url: string
@@ -40,7 +37,6 @@ function appendParameters(form: FormData, params?: DetectParameters) {
   if (params.confidence !== undefined) form.append('confidence', String(params.confidence))
   if (params.iou !== undefined) form.append('iou', String(params.iou))
   if (params.save_history !== undefined) form.append('save_history', String(params.save_history))
-  if (params.analyze !== undefined) form.append('analyze', String(params.analyze))
 }
 
 export function detectImage(file: File, params?: DetectParameters) {

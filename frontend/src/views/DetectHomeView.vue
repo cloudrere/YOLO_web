@@ -28,9 +28,9 @@ import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const modes = [
-  { path: '/detect/image', kicker: 'IMAGE', title: '单图检测', description: '上传一张图片，查看原图、检测图、目标列表和可选 AI 分析。', tag: '快速验证' },
+  { path: '/detect/image', kicker: 'IMAGE', title: '单图检测', description: '上传一张图片，查看原图、检测图和目标列表。', tag: '快速验证' },
   { path: '/detect/batch', kicker: 'BATCH', title: '批量图片检测', description: '多张图片逐张处理，支持暂停、继续、结束和进度反馈。', tag: '批量任务' },
-  { path: '/detect/video', kicker: 'VIDEO', title: '视频文件检测', description: '上传视频创建异步任务，持续查看帧流、进度和分析结果。', tag: '异步抽帧' },
+  { path: '/detect/video', kicker: 'VIDEO', title: '视频文件检测', description: '上传视频创建异步任务，持续查看帧流、进度和检测结果。', tag: '异步抽帧' },
   { path: '/detect/realtime', kicker: 'LIVE', title: '实时视频流检测', description: '连接摄像头或 RTSP/HTTP 流，实时显示 YOLO 标注画面。', tag: 'MJPEG 实时' },
 ]
 </script>

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.response import AppException
 from app.models.detection_record import DetectionRecord
 from app.models.detection_result import DetectionResult
+from app.models.task import Task
 from app.models.user import User
 from app.services.ai_analysis_service import analyze_detection_results
 from app.services.class_mapping_service import reverse_lookup_class, translate_class
@@ -14,9 +15,21 @@ from app.utils.time import format_datetime_second
 
 def _record_file_url(record: DetectionRecord, kind: str) -> str:
     selected = record.original_path if kind == "original" else record.result_path
-    if not selected or not Path(selected).is_file():
+    if not selected:
         return ""
-    return f"/api/detect/artifacts/{record.id}?kind={kind}"
+    path = Path(selected)
+    if path.is_file():
+        return f"/api/detect/artifacts/{record.id}?kind={kind}"
+    if kind == "result" and record.source_type == "video" and path.is_dir() and next(iter(sorted(path.glob("*.jpg"))), None):
+        return f"/api/detect/artifacts/{record.id}?kind=result"
+    return ""
+
+
+def _video_stream_url(db: Session, record: DetectionRecord) -> str:
+    if record.source_type != "video":
+        return ""
+    task = db.query(Task).filter(Task.record_id == record.id).order_by(Task.id.desc()).first()
+    return f"/api/detect/video/stream/{task.id}" if task else ""
 
 
 def _model_display_name(record: DetectionRecord) -> str:
@@ -85,6 +98,7 @@ def _record_to_item(db: Session, record: DetectionRecord) -> dict:
         "result_path": record.result_path,
         "original_url": _record_file_url(record, "original"),
         "result_url": _record_file_url(record, "result"),
+        "video_stream_url": _video_stream_url(db, record),
         "status": record.status,
         "duration_ms": record.duration_ms,
         "created_at": record.created_at,

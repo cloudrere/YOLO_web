@@ -21,6 +21,7 @@ export interface HistoryItem {
   result_path: string
   original_url: string
   result_url: string
+  video_stream_url?: string
   status: string
   duration_ms: number
   created_at: string
@@ -53,4 +54,8 @@ export function exportHistory(params: Record<string, unknown>) {
 
 export function deleteHistory(id: number) {
   return unwrap<{ deleted: number }>(request.delete(`/history/${id}`))
+}
+
+export function deleteHistoryBatch(ids: number[]) {
+  return unwrap<{ deleted: number }>(request.delete('/history/batch/delete', { data: { ids } }))
 }

@@ -5,6 +5,7 @@
         <div class="toolbar">
           <span>检测历史</span>
           <div class="form-actions">
+            <el-button type="danger" :disabled="!selectedRows.length" @click="removeSelected">批量删除</el-button>
             <el-button @click="exportRows">导出 Excel</el-button>
             <el-button @click="load">刷新</el-button>
           </div>
@@ -30,13 +31,22 @@
         <el-button type="primary" @click="load">查询</el-button>
       </el-form>
       <div class="table-scroll history-table-shell">
-        <el-table :data="rows" @row-click="openDetail">
+        <el-table :data="rows" @row-click="openDetail" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="48" />
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="缩略图" width="180">
             <template #default="{ row }">
-              <div class="thumb-pair">
-                <img v-if="row.original_url" :src="mediaUrl(row.original_url)" alt="原图" />
-                <img v-if="row.result_url" :src="mediaUrl(row.result_url)" alt="检测图" />
+              <div class="thumb-pair" :class="{ 'video-thumb-pair': row.source_type === 'video' }">
+                <template v-if="row.source_type === 'video'">
+                  <div class="history-video-thumb">
+                    <img v-if="row.result_url || row.original_url" :src="mediaUrl(row.result_url || row.original_url)" alt="视频第一帧" />
+                    <button class="thumb-play" type="button" @click.stop="openDetail(row)">播放</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <img v-if="row.original_url" :src="mediaUrl(row.original_url)" alt="原图" />
+                  <img v-if="row.result_url" :src="mediaUrl(row.result_url)" alt="检测图" />
+                </template>
               </div>
             </template>
           </el-table-column>
@@ -71,6 +81,10 @@
         <div><span>检测时间</span><strong>{{ detail.created_at_text || detail.created_at }}</strong></div>
         <div><span>参数</span><strong>{{ detail.confidence_threshold }} / {{ detail.iou_threshold }}</strong></div>
       </div>
+      <div v-if="detail?.source_type === 'video' && detail.video_stream_url" class="history-video-player">
+        <div class="preview-header"><div><span>视频回放</span><strong>检测帧流</strong></div></div>
+        <img class="video-stream" :src="mediaUrl(detail.video_stream_url)" :alt="detail.file_name" />
+      </div>
       <div v-if="detail?.original_url || detail?.result_url" class="compare-grid history-preview">
         <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
         <figure><img v-if="detail.result_url" :src="mediaUrl(detail.result_url)" :alt="detail.file_name" /><figcaption>检测图</figcaption></figure>
@@ -89,7 +103,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
 import { apiMediaUrl } from '@/api/detect'
-import { deleteHistory, exportHistory, getHistory, listHistory, type HistoryDetail, type HistoryItem } from '@/api/history'
+import { deleteHistory, deleteHistoryBatch, exportHistory, getHistory, listHistory, type HistoryDetail, type HistoryItem } from '@/api/history'
 
 const rows = ref<HistoryItem[]>([])
 const detail = ref<HistoryDetail | null>(null)
@@ -98,6 +112,7 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = 20
 const filters = reactive({ source_type: '', class_name: '', class_name_zh: '', username: '' })
+const selectedRows = ref<HistoryItem[]>([])
 
 function mediaUrl(path: string) {
   return apiMediaUrl(path)
@@ -109,6 +124,10 @@ async function load() {
   const data = await listHistory(filterParams())
   rows.value = data.items
   total.value = data.total
+  selectedRows.value = []
+}
+function handleSelectionChange(selection: HistoryItem[]) {
+  selectedRows.value = selection
 }
 async function openDetail(row: HistoryItem) {
   detail.value = await getHistory(row.id)
@@ -122,6 +141,17 @@ async function remove(id: number) {
   }
   await deleteHistory(id)
   ElMessage.success('检测历史已删除')
+  await load()
+}
+async function removeSelected() {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条检测历史吗？删除后不可在列表中恢复。`, '批量删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
+  await deleteHistoryBatch(selectedRows.value.map((row) => row.id))
+  ElMessage.success('检测历史已批量删除')
   await load()
 }
 async function exportRows() {

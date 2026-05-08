@@ -4,12 +4,11 @@
       <div>
         <span class="eyebrow dark">单图检测</span>
         <h2>图片检测与标注预览</h2>
-        <p>上传一张图片，按当前参数生成检测图；AI 分析默认关闭，需要时手动开启。</p>
+        <p>上传一张图片，按当前参数生成检测图和目标列表，结果可选择保存到历史记录。</p>
       </div>
       <div class="status-pills">
         <el-tag type="success">独立页面</el-tag>
         <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
-        <el-tag :type="params.analyze ? 'primary' : 'info'">{{ params.analyze ? 'AI 分析开启' : 'AI 分析关闭' }}</el-tag>
       </div>
     </section>
 
@@ -22,7 +21,6 @@
           <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" />
           <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" />
-          <el-switch v-model="params.analyze" active-text="开启 AI 分析" inactive-text="关闭 AI 分析" />
         </div>
         <div class="mode-config">
           <h3>上传图片</h3>
@@ -63,8 +61,6 @@
         <el-button :disabled="loading || !hasResult" @click="clearResults">清除结果</el-button>
       </div>
       <DetectionResultTable :results="result?.results || []" />
-      <AnalysisPanel v-if="result?.analysis" :analysis="result.analysis" />
-      <el-empty v-else-if="result && !params.analyze" description="AI 分析未开启，本次不生成统计分析" />
     </section>
   </AppLayout>
 </template>
@@ -73,15 +69,14 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
-import { apiMediaUrl, detectImage, type DetectParameters, type ImageDetectResult } from '@/api/detect'
+import { apiMediaUrl, detectImage, type ImageDetectResult } from '@/api/detect'
 
 const imageFile = ref<File | null>(null)
 const result = ref<ImageDetectResult | null>(null)
 const loading = ref(false)
 const errorText = ref('')
-const params = reactive<Required<DetectParameters>>({ confidence: 0.25, iou: 0.7, save_history: true, analyze: false })
+const params = reactive({ confidence: 0.25, iou: 0.7, save_history: true })
 const hasResult = computed(() => Boolean(result.value))
 const topClass = computed(() => {
   const rows = result.value?.results || []

@@ -141,6 +141,11 @@ def resolve_record_artifact(db: Session, record_id: int, kind: str = "result") -
     if not selected:
         raise AppException(40406, "Detection artifact not found", 404)
     path = Path(selected).resolve()
+    if path.is_dir():
+        first_frame = next(iter(sorted(path.glob("*.jpg"))), None)
+        if first_frame is None:
+            raise AppException(40406, "Detection artifact not found", 404)
+        path = first_frame.resolve()
     roots = [settings.results_path.resolve(), settings.uploads_path.resolve()]
     if not any(root in path.parents or path == root for root in roots):
         raise AppException(40301, "Artifact path is outside storage", 403)
