@@ -28,9 +28,9 @@ class AIAnalysisOut(BaseModel):
 
 
 class ImageDetectResponse(BaseModel):
-    record_id: int
+    record_id: int | None = None
     results: list[DetectionResultOut]
-    analysis: AIAnalysisOut
+    analysis: AIAnalysisOut | None = None
     duration_ms: int
     result_url: str = ""
 

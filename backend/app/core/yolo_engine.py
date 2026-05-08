@@ -122,11 +122,24 @@ class YoloEngine:
             pass
         return devices
 
+    def device_resolution_reason(self) -> str:
+        requested = (self._requested_device or "auto").lower()
+        if requested == "cpu":
+            return "用户配置强制使用 CPU"
+        if requested == "auto" and self._device.startswith("cuda"):
+            return "自动选择可用 CUDA 设备"
+        if requested == "auto" and self._device == "cpu":
+            return "自动模式未检测到 CUDA，回退到 CPU"
+        if requested.startswith("cuda"):
+            return "用户指定 CUDA 设备"
+        return "使用当前 YOLO 设备配置"
+
     def state(self) -> dict[str, Any]:
         return {
             "engine_loaded": self.is_loaded,
             "device": self._device,
             "requested_device": self._requested_device,
+            "device_resolution_reason": self.device_resolution_reason(),
             "available_devices": self.available_devices(),
             "cuda_available": self.cuda_available(),
             "cuda_name": self.cuda_name(),

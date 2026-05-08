@@ -24,6 +24,7 @@ export interface HistoryItem {
   status: string
   duration_ms: number
   created_at: string
+  created_at_text: string
   result_count: number
   classes: HistoryClassSummary[]
   confidence_threshold: number
@@ -35,7 +36,7 @@ export interface HistoryItem {
 
 export interface HistoryDetail extends HistoryItem {
   results: DetectionResult[]
-  analysis: AIAnalysis
+  analysis: AIAnalysis | null
 }
 
 export function listHistory(params: Record<string, unknown>) {

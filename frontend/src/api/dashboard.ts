@@ -12,6 +12,21 @@ export interface SystemStatus {
     reserved_memory: number
     temperature: number | null
   }>
+  torch_version: string
+  torch_cuda_version: string
+  cuda_available: boolean
+  cuda_device_count: number
+  cuda_error: string
+  diagnostics: {
+    requested_device: string
+    resolved_device: string
+    torch_version: string
+    torch_cuda_version: string
+    cuda_available: boolean
+    cuda_device_count: number
+    warmup_error: string
+    checks: Array<{ name: string; status: 'ok' | 'info' | 'warning' | 'error' | string; message: string }>
+  }
   engine: Record<string, unknown>
 }
 
@@ -21,6 +36,10 @@ export interface DashboardMetrics {
   video_count: number
   active_users: number
   daily_trend_7d: Array<{ date: string; count: number }>
+  user_detection_trend_7d: Array<{ date: string; users: Record<string, number> }>
+  class_distribution: Array<{ class: string; class_zh?: string; count: number; avg_confidence: number }>
+  model_call_ranking: Array<{ model: string; count: number }>
+  ai_call_trend_7d: Array<{ date: string; count: number }>
   top_detected_classes: Array<{ class: string; class_zh?: string; count: number }>
   admin?: {
     total_users: number

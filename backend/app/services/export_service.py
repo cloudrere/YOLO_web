@@ -30,7 +30,7 @@ def export_history_xlsx(
                 row.get("result_count"),
                 ", ".join(item.get("class_zh") or item.get("class") or "" for item in row.get("classes", [])),
                 row.get("duration_ms"),
-                str(row.get("created_at") or ""),
+                row.get("created_at_text") or "",
             ]
         )
     buffer = BytesIO()

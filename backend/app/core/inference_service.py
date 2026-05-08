@@ -66,6 +66,10 @@ def normalize_threshold(value: float | None, default: float, low: float = 0.0, h
     return min(high, max(low, float(value)))
 
 
+def analysis_payload(results: list[dict], analyze: bool) -> dict | None:
+    return analyze_detection_results(results) if analyze else None
+
+
 def create_record(
     db: Session,
     user_id: int | None,
@@ -178,6 +182,7 @@ def detect_image(
     confidence: float | None = None,
     iou: float | None = None,
     save_history: bool = True,
+    analyze: bool = False,
 ) -> dict:
     active_model = ensure_active_model_loaded(db)
     conf_value = normalize_threshold(confidence, settings.confidence_threshold)
@@ -190,17 +195,17 @@ def detect_image(
     if not save_history:
         original_path = save_temp_original(saved)
         result_path = save_temp_detection_image(saved, detections)
-        create_log(db, "detect", "Image detection completed without history", module="detect", user_id=user.id)
+        create_log(db, "detect", "单图检测已完成，未写入历史记录", module="detect", user_id=user.id)
         return {
             "record_id": None,
             "results": output,
-            "analysis": analyze_detection_results(output),
+            "analysis": analysis_payload(output, analyze),
             "duration_ms": duration_ms,
             "original_url": temp_file_url(original_path),
             "result_url": temp_file_url(result_path),
             "model_name": active_model.display_name or active_model.name,
             "device": yolo_engine.device,
-            "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": False},
+            "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": False, "analyze": analyze},
         }
     record = create_record(
         db,
@@ -219,17 +224,17 @@ def detect_image(
     save_detection_results(db, record.id, detections, model_id=active_model.id)
     result_url = save_annotated_image(record, saved, detections, "images")
     db.commit()
-    create_log(db, "detect", f"Image detection completed for record {record.id}", module="detect", user_id=user.id)
+    create_log(db, "detect", f"单图检测已完成，记录编号 {record.id}", module="detect", user_id=user.id)
     return {
         "record_id": record.id,
         "results": output,
-        "analysis": analyze_detection_results(output),
+        "analysis": analysis_payload(output, analyze),
         "duration_ms": duration_ms,
         "original_url": record_file_url(record.id, "original"),
         "result_url": result_url,
         "model_name": active_model.display_name or active_model.name,
         "device": yolo_engine.device,
-        "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": True},
+        "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": True, "analyze": analyze},
     }
 
 
@@ -240,6 +245,7 @@ def detect_batch(
     confidence: float | None = None,
     iou: float | None = None,
     save_history: bool = True,
+    analyze: bool = False,
 ) -> dict:
     active_model = ensure_active_model_loaded(db)
     conf_value = normalize_threshold(confidence, settings.confidence_threshold)
@@ -286,15 +292,15 @@ def detect_batch(
                 "status": "done",
                 "record_id": record_id,
                 "results": output,
-                "analysis": analyze_detection_results(output),
+                "analysis": analysis_payload(output, analyze),
                 "error": "",
                 "original_url": original_url,
                 "result_url": result_url,
                 "duration_ms": int((time.perf_counter() - start) * 1000),
             }
         )
-    create_log(db, "detect", f"Batch detection completed for {len(items)} files", module="detect", user_id=user.id)
-    return {"items": items, "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": save_history}}
+    create_log(db, "detect", f"批量检测已完成，共处理 {len(items)} 个文件", module="detect", user_id=user.id)
+    return {"items": items, "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": save_history, "analyze": analyze}}
 
 
 def create_video_task(
@@ -304,6 +310,7 @@ def create_video_task(
     confidence: float | None = None,
     iou: float | None = None,
     save_history: bool = True,
+    analyze: bool = False,
 ) -> dict:
     active_model = ensure_active_model_loaded(db)
     conf_value = normalize_threshold(confidence, settings.confidence_threshold)
@@ -337,6 +344,7 @@ def create_video_task(
                 "confidence": conf_value,
                 "iou": iou_value,
                 "save_history": save_history,
+                "analyze": analyze,
             },
             ensure_ascii=False,
         ),
@@ -346,13 +354,13 @@ def create_video_task(
     db.commit()
     db.refresh(task)
     task_queue.enqueue(task.id)
-    create_log(db, "task", f"Video detection task {task.id} created", module="detect", user_id=user.id)
+    create_log(db, "task", f"视频检测任务 {task.id} 已创建", module="detect", user_id=user.id)
     return {
         "task_id": task.id,
         "record_id": record.id,
         "status": task.status,
         "original_url": record_file_url(record.id, "original"),
-        "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": save_history},
+        "parameters": {"confidence": conf_value, "iou": iou_value, "save_history": save_history, "analyze": analyze},
     }
 
 
@@ -363,6 +371,7 @@ def process_video_task(task: Task, db: Session) -> dict:
     model_id = int(payload.get("model_id") or 0) or None
     conf_value = normalize_threshold(payload.get("confidence"), settings.confidence_threshold)
     iou_value = normalize_threshold(payload.get("iou"), settings.iou_threshold)
+    analyze = bool(payload.get("analyze", False))
     record = db.get(DetectionRecord, record_id)
     if record is None:
         raise AppException(40404, "Detection record not found", 404)
@@ -388,7 +397,7 @@ def process_video_task(task: Task, db: Session) -> dict:
             record.status = "cancelled"
             db.commit()
             cap.release()
-            create_log(db, "task", f"Video detection task {task.id} cancelled", module="detect", user_id=task.user_id)
+            create_log(db, "task", f"视频检测任务 {task.id} 已取消", module="detect", user_id=task.user_id)
             return {
                 "record_id": record.id,
                 "frames_processed": processed_frames,
@@ -430,13 +439,13 @@ def process_video_task(task: Task, db: Session) -> dict:
     record.duration_ms = int((time.perf_counter() - start) * 1000)
     record.result_path = str(output_dir)
     db.commit()
-    create_log(db, "task", f"Video detection task {task.id} completed", module="detect", user_id=task.user_id)
+    create_log(db, "task", f"视频检测任务 {task.id} 已完成", module="detect", user_id=task.user_id)
     return {
         "record_id": record.id,
         "frames_processed": processed_frames,
         "frames_sampled": sampled_frames,
         "results_count": len(all_detections),
-        "analysis": analyze_detection_results([detection_to_schema(item, db, model_id, item.get("frame_id")) for item in all_detections]),
+        "analysis": analysis_payload([detection_to_schema(item, db, model_id, item.get("frame_id")) for item in all_detections], analyze),
         "frame_dir": str(output_dir),
         "original_url": record_file_url(record.id, "original"),
         "result_url": f"/api/detect/video/stream/{task.id}",

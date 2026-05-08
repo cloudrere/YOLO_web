@@ -20,5 +20,5 @@ def get_assistant_status(_: User = Depends(require_permission("assistant:use")))
 @router.post("/chat")
 def chat_api(payload: AssistantChatRequest, db: Session = Depends(get_db), current_user: User = Depends(require_permission("assistant:use"))):
     data = chat_with_assistant(db, current_user, payload.question)
-    create_log(db, "assistant", "AI assistant question completed", module="assistant", user_id=current_user.id)
+    create_log(db, "assistant", "AI 助手问答已完成", module="assistant", user_id=current_user.id)
     return success(data)

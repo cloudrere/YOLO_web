@@ -9,6 +9,7 @@ from app.models.detection_result import DetectionResult
 from app.models.user import User
 from app.services.ai_analysis_service import analyze_detection_results
 from app.services.class_mapping_service import reverse_lookup_class, translate_class
+from app.utils.time import format_datetime_second
 
 
 def _record_file_url(record: DetectionRecord, kind: str) -> str:
@@ -87,6 +88,7 @@ def _record_to_item(db: Session, record: DetectionRecord) -> dict:
         "status": record.status,
         "duration_ms": record.duration_ms,
         "created_at": record.created_at,
+        "created_at_text": format_datetime_second(record.created_at),
         "result_count": len(record.results),
         "classes": _class_summary(db, record),
         "confidence_threshold": record.confidence_threshold,

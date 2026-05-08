@@ -14,6 +14,7 @@ class LogOut(BaseModel):
     module: str
     module_zh: str = ""
     message: str
+    message_raw: str = ""
     user_id: int | None
     request_id: str
     created_at: datetime

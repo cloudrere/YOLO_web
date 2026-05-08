@@ -53,7 +53,7 @@
           <el-table-column prop="status" label="状态" width="100" />
           <el-table-column prop="result_count" label="目标数" width="100" />
           <el-table-column prop="duration_ms" label="耗时(ms)" width="130" />
-          <el-table-column prop="created_at" label="创建时间" width="190" />
+          <el-table-column prop="created_at_text" label="检测时间" width="190" />
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
               <el-button type="danger" size="small" @click.stop="remove(row.id)">删除</el-button>
@@ -68,6 +68,7 @@
         <div><span>用户</span><strong>{{ detail.username || detail.user_id || '暂无' }}</strong></div>
         <div><span>模型</span><strong>{{ detail.model_name || '暂无' }}</strong></div>
         <div><span>设备</span><strong>{{ detail.device || '暂无' }}</strong></div>
+        <div><span>检测时间</span><strong>{{ detail.created_at_text || detail.created_at }}</strong></div>
         <div><span>参数</span><strong>{{ detail.confidence_threshold }} / {{ detail.iou_threshold }}</strong></div>
       </div>
       <div v-if="detail?.original_url || detail?.result_url" class="compare-grid history-preview">
@@ -83,6 +84,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AnalysisPanel from '@/components/detection/AnalysisPanel.vue'
 import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
@@ -113,7 +115,13 @@ async function openDetail(row: HistoryItem) {
   drawer.value = true
 }
 async function remove(id: number) {
+  try {
+    await ElMessageBox.confirm('确认删除这条检测历史吗？删除后不可在列表中恢复。', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
   await deleteHistory(id)
+  ElMessage.success('检测历史已删除')
   await load()
 }
 async function exportRows() {
@@ -124,6 +132,7 @@ async function exportRows() {
   link.download = '检测历史.xlsx'
   link.click()
   URL.revokeObjectURL(url)
+  ElMessage.success('检测历史已导出')
 }
 onMounted(load)
 </script>

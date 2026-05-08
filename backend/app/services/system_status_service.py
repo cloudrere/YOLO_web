@@ -26,11 +26,20 @@ def get_system_status() -> dict:
         pass
 
     gpu_devices = []
+    torch_version = ""
+    torch_cuda_version = ""
+    cuda_available = False
+    cuda_device_count = 0
+    cuda_error = ""
     try:
         import torch
 
-        if torch.cuda.is_available():
-            for index in range(torch.cuda.device_count()):
+        torch_version = str(torch.__version__)
+        torch_cuda_version = str(torch.version.cuda or "")
+        cuda_available = bool(torch.cuda.is_available())
+        cuda_device_count = int(torch.cuda.device_count()) if cuda_available else 0
+        if cuda_available:
+            for index in range(cuda_device_count):
                 props = torch.cuda.get_device_properties(index)
                 gpu_devices.append(
                     {
@@ -42,15 +51,72 @@ def get_system_status() -> dict:
                         "temperature": gpu_temperature(index),
                     }
                 )
-    except Exception:
-        pass
+    except Exception as exc:
+        cuda_error = str(exc)
 
+    engine_state = yolo_engine.state()
+    diagnostics = build_gpu_diagnostics(engine_state, torch_version, torch_cuda_version, cuda_available, cuda_device_count, cuda_error)
     return {
         "cpu_percent": cpu_percent,
         "memory": memory,
         "temperature": temperature,
         "gpu_devices": gpu_devices,
-        "engine": yolo_engine.state(),
+        "torch_version": torch_version,
+        "torch_cuda_version": torch_cuda_version,
+        "cuda_available": cuda_available,
+        "cuda_device_count": cuda_device_count,
+        "cuda_error": cuda_error,
+        "diagnostics": diagnostics,
+        "engine": engine_state,
+    }
+
+
+def build_gpu_diagnostics(
+    engine_state: dict,
+    torch_version: str,
+    torch_cuda_version: str,
+    cuda_available: bool,
+    cuda_device_count: int,
+    cuda_error: str,
+) -> dict:
+    requested_device = engine_state.get("requested_device") or "auto"
+    resolved_device = engine_state.get("device") or ""
+    warmup_error = engine_state.get("warmup_error") or ""
+    checks = []
+    if not torch_version:
+        checks.append({"name": "PyTorch", "status": "error", "message": "未检测到 PyTorch，无法使用 CUDA 推理。"})
+    else:
+        checks.append({"name": "PyTorch", "status": "ok", "message": f"PyTorch 版本：{torch_version}"})
+    if not torch_cuda_version:
+        checks.append({"name": "CUDA 运行时", "status": "warning", "message": "当前 PyTorch 未包含 CUDA 运行时，通常只能使用 CPU。"})
+    else:
+        checks.append({"name": "CUDA 运行时", "status": "ok", "message": f"PyTorch CUDA 版本：{torch_cuda_version}"})
+    if cuda_available and cuda_device_count > 0:
+        checks.append({"name": "CUDA 设备", "status": "ok", "message": f"检测到 {cuda_device_count} 个 CUDA 设备。"})
+    else:
+        message = cuda_error or "torch.cuda.is_available() 返回 False，请检查显卡驱动、CUDA 版本和 PyTorch 安装。"
+        checks.append({"name": "CUDA 设备", "status": "error", "message": message})
+    if requested_device == "cpu":
+        checks.append({"name": "YOLO 设备配置", "status": "warning", "message": "当前配置强制使用 CPU。"})
+    elif str(requested_device).startswith("cuda") and not resolved_device.startswith("cuda"):
+        checks.append({"name": "YOLO 设备配置", "status": "error", "message": f"请求 {requested_device}，实际运行在 {resolved_device or '未知设备'}。"})
+    else:
+        checks.append({"name": "YOLO 设备配置", "status": "ok", "message": f"请求设备：{requested_device}，实际设备：{resolved_device or '未加载'}。"})
+    if warmup_error:
+        checks.append({"name": "模型预热", "status": "warning", "message": warmup_error})
+    elif engine_state.get("warmup_status") in {"cuda_ready", "cpu_ready"}:
+        checks.append({"name": "模型预热", "status": "ok", "message": f"预热状态：{engine_state.get('warmup_status')}。"})
+    else:
+        checks.append({"name": "模型预热", "status": "info", "message": f"预热状态：{engine_state.get('warmup_status') or 'idle'}。"})
+    return {
+        "requested_device": requested_device,
+        "resolved_device": resolved_device,
+        "torch_version": torch_version,
+        "torch_cuda_version": torch_cuda_version,
+        "cuda_available": cuda_available,
+        "cuda_device_count": cuda_device_count,
+        "warmup_error": warmup_error,
+        "checks": checks,
     }
 
 

@@ -75,10 +75,16 @@
           <el-table-column prop="is_active" label="状态" width="110">
             <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '运行中' : '未激活' }}</el-tag></template>
           </el-table-column>
-          <el-table-column prop="path" label="路径" min-width="260" />
-          <el-table-column label="操作" width="330" fixed="right">
+          <el-table-column prop="path" label="路径" min-width="260">
             <template #default="{ row }">
-              <div class="form-actions table-actions">
+              <el-tooltip :content="row.path" placement="top">
+                <span class="ellipsis-text">{{ row.path }}</span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="360" fixed="right">
+            <template #default="{ row }">
+              <div class="form-actions table-actions wrap-actions">
                 <el-button type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
                 <el-button size="small" @click="openDisplayName(row)">改名</el-button>
                 <el-button size="small" @click="openMapping(row)">类别映射</el-button>
@@ -117,7 +123,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import type { UploadFile } from 'element-plus'
+import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import {
   activateModel,
@@ -183,12 +189,14 @@ async function load() {
 async function register() {
   await registerModel({ ...form, class_names: [] })
   Object.assign(form, { name: '', path: '', version: '' })
+  ElMessage.success('模型路径已登记')
   await load()
 }
 async function upload() {
   if (!uploadFileRef.value) return
   await uploadModel(uploadFileRef.value)
   uploadFileRef.value = null
+  ElMessage.success('模型文件已上传')
   await load()
 }
 async function switchDevice() {
@@ -196,6 +204,7 @@ async function switchDevice() {
   try {
     active.value = await switchModelDevice(selectedDevice.value)
     models.value = (await listModels()).items
+    ElMessage.success('推理设备已切换并预热')
   } finally {
     switchingDevice.value = false
   }
@@ -204,6 +213,7 @@ async function activate(id: number) {
   activatingId.value = id
   try {
     await activateModel(id, selectedDevice.value)
+    ElMessage.success('模型已激活')
     await load()
   } finally {
     activatingId.value = null
@@ -218,6 +228,7 @@ async function saveDisplayName() {
   if (!selectedModel.value) return
   await updateModelDisplayName(selectedModel.value.id, displayNameForm.value)
   displayDialog.value = false
+  ElMessage.success('模型显示名称已更新')
   await load()
 }
 function openMapping(row: ModelInfo) {
@@ -232,10 +243,17 @@ async function saveMapping() {
   const mapping = Object.fromEntries(mappingRows.value.map((row) => [row.class_name, row.class_zh]))
   await updateModelClassMapping(selectedModel.value.id, mapping)
   mappingDrawer.value = false
+  ElMessage.success('类别映射已保存')
   await load()
 }
 async function remove(id: number) {
+  try {
+    await ElMessageBox.confirm('确认删除这个未激活模型吗？模型记录删除后不可恢复。', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
   await deleteModel(id)
+  ElMessage.success('模型已删除')
   await load()
 }
 function parseJson<T>(text: string, fallback: T): T {

@@ -65,7 +65,7 @@ def switch_model_device_api(
     current_user: User = Depends(require_permission("model:manage")),
 ):
     data = switch_active_device(db, payload.device)
-    create_log(db, "model", f"Switched model device to {payload.device}", module="model", user_id=current_user.id)
+    create_log(db, "model", f"模型推理设备已切换为 {payload.device}", module="model", user_id=current_user.id)
     return success(serialize_active_state(data))
 
 
@@ -82,7 +82,7 @@ def activate_model_api(
     current_user: User = Depends(require_permission("model:manage")),
 ):
     item = activate_model(db, model_id, payload.device if payload else None)
-    create_log(db, "model", f"Activated model {item.name}", module="model", user_id=current_user.id)
+    create_log(db, "model", f"模型 {item.name} 已激活", module="model", user_id=current_user.id)
     return success(ModelOut.model_validate(item).model_dump())
 
 
@@ -94,7 +94,7 @@ def patch_model_display_name(
     current_user: User = Depends(require_permission("model:manage")),
 ):
     item = update_model_display_name(db, model_id, payload.display_name)
-    create_log(db, "model", f"Updated model display name {model_id}", module="model", user_id=current_user.id)
+    create_log(db, "model", f"模型 {model_id} 的显示名称已更新", module="model", user_id=current_user.id)
     return success(ModelOut.model_validate(item).model_dump())
 
 
@@ -106,7 +106,7 @@ def patch_model_class_mapping(
     current_user: User = Depends(require_permission("model:manage")),
 ):
     item = update_model_class_mapping(db, model_id, payload.mapping)
-    create_log(db, "model", f"Updated model class mapping {model_id}", module="model", user_id=current_user.id)
+    create_log(db, "model", f"模型 {model_id} 的类别映射已更新", module="model", user_id=current_user.id)
     return success(ModelOut.model_validate(item).model_dump())
 
 
@@ -117,5 +117,5 @@ def delete_model_api(
     current_user: User = Depends(require_permission("model:manage")),
 ):
     delete_model(db, model_id)
-    create_log(db, "model", f"Deleted model {model_id}", module="model", user_id=current_user.id)
+    create_log(db, "model", f"模型 {model_id} 已删除", module="model", user_id=current_user.id)
     return success({"deleted": True})

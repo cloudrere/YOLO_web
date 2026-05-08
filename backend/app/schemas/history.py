@@ -30,6 +30,7 @@ class DetectionRecordListItem(BaseModel):
     status: str
     duration_ms: int
     created_at: datetime
+    created_at_text: str = ""
     result_count: int = 0
     classes: list[HistoryClassSummary] = []
     confidence_threshold: float = 0.25
@@ -55,10 +56,11 @@ class DetectionRecordDetail(BaseModel):
     status: str
     duration_ms: int
     created_at: datetime
+    created_at_text: str = ""
     result_count: int = 0
     classes: list[HistoryClassSummary] = []
     results: list[DetectionResultOut]
-    analysis: AIAnalysisOut
+    analysis: AIAnalysisOut | None = None
     confidence_threshold: float = 0.25
     iou_threshold: float = 0.7
     save_history: bool = True

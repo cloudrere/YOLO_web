@@ -53,6 +53,7 @@ class ActiveModelOut(BaseModel):
     engine_loaded: bool
     device: str
     requested_device: str = "auto"
+    device_resolution_reason: str = ""
     available_devices: list[dict[str, Any]] = []
     cuda_available: bool
     cuda_name: str = ""

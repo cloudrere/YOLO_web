@@ -68,6 +68,7 @@ export interface ModelEngineState {
   engine_loaded: boolean
   device: string
   requested_device: string
+  device_resolution_reason?: string
   available_devices: ModelDeviceInfo[]
   cuda_available: boolean
   cuda_name: string

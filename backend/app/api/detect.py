@@ -42,10 +42,11 @@ def detect_image_api(
     confidence: float | None = Form(None),
     iou: float | None = Form(None),
     save_history: bool = Form(True),
+    analyze: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("detect:run")),
 ):
-    return success(detect_image(db, file, current_user, confidence, iou, save_history))
+    return success(detect_image(db, file, current_user, confidence, iou, save_history, analyze))
 
 
 @router.post("/batch")
@@ -54,10 +55,11 @@ def detect_batch_api(
     confidence: float | None = Form(None),
     iou: float | None = Form(None),
     save_history: bool = Form(True),
+    analyze: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("detect:run")),
 ):
-    return success(detect_batch(db, files, current_user, confidence, iou, save_history))
+    return success(detect_batch(db, files, current_user, confidence, iou, save_history, analyze))
 
 
 @router.post("/video")
@@ -66,10 +68,11 @@ def detect_video_api(
     confidence: float | None = Form(None),
     iou: float | None = Form(None),
     save_history: bool = Form(True),
+    analyze: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("detect:run")),
 ):
-    return success(create_video_task(db, file, current_user, confidence, iou, save_history))
+    return success(create_video_task(db, file, current_user, confidence, iou, save_history, analyze))
 
 
 @router.get("/tasks/{task_id}")
