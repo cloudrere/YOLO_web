@@ -317,7 +317,7 @@ npm --prefix frontend run build
 依赖安装检查：
 
 ```bash
-/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r backend/requirements.txt
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r requirements.txt
 ```
 
 ## 常见目录和数据
