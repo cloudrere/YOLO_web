@@ -31,7 +31,7 @@ def authorize_query_token(token: str | None, db: Session) -> User:
     credentials = SimpleNamespace(credentials=token)
     user = get_current_user(credentials=credentials, db=db)
     permissions = get_user_permissions(user)
-    if "detect:run" not in permissions and not user.is_superuser:
+    if not ({"detect:run", "history:read"} & permissions) and not user.is_superuser:
         raise AppException(40300, "Permission denied", 403)
     return user
 
@@ -101,7 +101,9 @@ def get_artifact_api(
 ):
     authorize_query_token(token, db)
     path = resolve_record_artifact(db, record_id, kind=kind)
-    return FileResponse(path)
+    media_type = "video/mp4" if path.suffix.lower() == ".mp4" else None
+    headers = {"Content-Disposition": f'inline; filename="{path.name}"'} if media_type else None
+    return FileResponse(path, media_type=media_type, headers=headers)
 
 
 @router.get("/temp/{name}")

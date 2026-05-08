@@ -3,6 +3,7 @@ from pathlib import Path
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.core.response import AppException
 from app.models.detection_record import DetectionRecord
 from app.models.detection_result import DetectionResult
@@ -14,6 +15,8 @@ from app.utils.time import format_datetime_second
 
 
 def _record_file_url(record: DetectionRecord, kind: str) -> str:
+    if record.source_type == "video" and kind in {"original", "result"}:
+        return ""
     selected = record.original_path if kind == "original" else record.result_path
     if not selected:
         return ""
@@ -30,10 +33,11 @@ def _video_thumb_url(db: Session, record: DetectionRecord) -> str:
         return ""
     task = db.query(Task).filter(Task.record_id == record.id).order_by(Task.id.desc()).first()
     if task is not None:
-        frame_dir = Path(record.result_path) if Path(record.result_path).is_dir() else Path(record.result_path).parent.parent / "video_frames" / str(task.id)
+        result_path = Path(record.result_path) if record.result_path else Path()
+        frame_dir = result_path if result_path.is_dir() else settings.results_path / "video_frames" / str(task.id)
         if next(iter(sorted(frame_dir.glob("*.jpg"))), None):
             return f"/api/detect/artifacts/{record.id}?kind=thumbnail"
-    return _record_file_url(record, "result")
+    return ""
 
 
 def _record_video_url(record: DetectionRecord) -> str:

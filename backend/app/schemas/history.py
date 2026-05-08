@@ -27,6 +27,9 @@ class DetectionRecordListItem(BaseModel):
     result_path: str = ""
     original_url: str = ""
     result_url: str = ""
+    video_thumb_url: str = ""
+    video_url: str = ""
+    video_stream_url: str = ""
     status: str
     duration_ms: int
     created_at: datetime
@@ -50,9 +53,12 @@ class DetectionRecordDetail(BaseModel):
     file_name: str
     file_path: str
     original_path: str = ""
-    result_path: str
+    result_path: str = ""
     original_url: str = ""
     result_url: str = ""
+    video_thumb_url: str = ""
+    video_url: str = ""
+    video_stream_url: str = ""
     status: str
     duration_ms: int
     created_at: datetime

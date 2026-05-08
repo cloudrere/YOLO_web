@@ -255,7 +255,26 @@ function resizeCharts() {
   charts.forEach((chart) => chart.resize())
 }
 function chartBaseGrid(top = 34) {
-  return { left: 44, right: 22, top, bottom: 34 }
+  return { left: 48, right: 24, top, bottom: 38 }
+}
+function toEpochSeries(values: number[]) {
+  const epochs = summary.value?.epochs || []
+  return epochs.map((epoch, index) => [epoch, values[index]])
+}
+function lineSeries(name: string, values: number[], extra: Record<string, unknown> = {}) {
+  return {
+    name,
+    type: 'line',
+    smooth: true,
+    showSymbol: false,
+    symbol: 'circle',
+    symbolSize: 5,
+    connectNulls: true,
+    lineStyle: { width: 3 },
+    emphasis: { focus: 'series' },
+    data: toEpochSeries(values),
+    ...extra,
+  }
 }
 function renderPrecisionRecallChart() {
   const chart = makeChart(precisionRecallEl.value)
@@ -266,11 +285,11 @@ function renderPrecisionRecallChart() {
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
-    xAxis: { type: 'category', data: data.epochs },
+    xAxis: { type: 'value', name: 'Epoch', min: 'dataMin', max: 'dataMax' },
     yAxis: { type: 'value', max: 1 },
     series: [
-      { name: 'Precision', type: 'line', smooth: true, data: data.precision },
-      { name: 'Recall', type: 'line', smooth: true, data: data.recall },
+      lineSeries('Precision', data.precision),
+      lineSeries('Recall', data.recall),
     ],
   })
 }
@@ -283,11 +302,11 @@ function renderMapChart() {
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
-    xAxis: { type: 'category', data: data.epochs },
+    xAxis: { type: 'value', name: 'Epoch', min: 'dataMin', max: 'dataMax' },
     yAxis: { type: 'value', max: 1 },
     series: [
-      { name: 'mAP50', type: 'line', smooth: true, areaStyle: { opacity: 0.12 }, data: data.map50 },
-      { name: 'mAP50-95', type: 'line', smooth: true, areaStyle: { opacity: 0.08 }, data: data.map5095 },
+      lineSeries('mAP50', data.map50, { areaStyle: { opacity: 0.12 } }),
+      lineSeries('mAP50-95', data.map5095, { areaStyle: { opacity: 0.08 } }),
     ],
   })
 }
@@ -300,15 +319,15 @@ function renderLossChart() {
     tooltip: { trigger: 'axis' },
     legend: { top: 0, type: 'scroll' },
     grid: chartBaseGrid(54),
-    xAxis: { type: 'category', data: data.epochs },
+    xAxis: { type: 'value', name: 'Epoch', min: 'dataMin', max: 'dataMax' },
     yAxis: { type: 'value' },
     series: [
-      { name: 'Train Box', type: 'line', smooth: true, data: data.train_box_loss },
-      { name: 'Train Cls', type: 'line', smooth: true, data: data.train_cls_loss },
-      { name: 'Train DFL', type: 'line', smooth: true, data: data.train_dfl_loss },
-      { name: 'Val Box', type: 'line', smooth: true, data: data.val_box_loss },
-      { name: 'Val Cls', type: 'line', smooth: true, data: data.val_cls_loss },
-      { name: 'Val DFL', type: 'line', smooth: true, data: data.val_dfl_loss },
+      lineSeries('Train Box', data.train_box_loss),
+      lineSeries('Train Cls', data.train_cls_loss),
+      lineSeries('Train DFL', data.train_dfl_loss),
+      lineSeries('Val Box', data.val_box_loss),
+      lineSeries('Val Cls', data.val_cls_loss),
+      lineSeries('Val DFL', data.val_dfl_loss),
     ],
   })
 }
@@ -346,12 +365,12 @@ function renderLearningRateChart() {
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
-    xAxis: { type: 'category', data: data.epochs },
+    xAxis: { type: 'value', name: 'Epoch', min: 'dataMin', max: 'dataMax' },
     yAxis: { type: 'value' },
     series: [
-      { name: 'lr/pg0', type: 'line', smooth: true, data: data.lr_pg0 },
-      { name: 'lr/pg1', type: 'line', smooth: true, data: data.lr_pg1 },
-      { name: 'lr/pg2', type: 'line', smooth: true, data: data.lr_pg2 },
+      lineSeries('lr/pg0', data.lr_pg0),
+      lineSeries('lr/pg1', data.lr_pg1),
+      lineSeries('lr/pg2', data.lr_pg2),
     ],
   })
 }

@@ -2,6 +2,8 @@ import json
 import shutil
 import time
 from pathlib import Path
+from queue import Empty, Queue
+from threading import Event, Thread
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -564,28 +566,53 @@ def stream_realtime_source(source: str, confidence: float | None = None, iou: fl
     cap = cv2.VideoCapture(normalize_realtime_source(source))
     if not cap.isOpened():
         raise AppException(40023, "Cannot open realtime video source")
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    stop_event = Event()
+    latest_frame: Queue = Queue(maxsize=1)
+
+    def capture_latest_frame() -> None:
+        try:
+            while not stop_event.is_set():
+                ok, frame = cap.read()
+                if not ok:
+                    stop_event.set()
+                    break
+                if latest_frame.full():
+                    try:
+                        latest_frame.get_nowait()
+                    except Empty:
+                        pass
+                latest_frame.put(frame)
+        finally:
+            cap.release()
+
+    capture_thread = Thread(target=capture_latest_frame, daemon=True)
+    capture_thread.start()
 
     def frames():
         min_interval = 1 / max(1, settings.video_sample_fps)
         last_sent = 0.0
+        encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 72]
         try:
-            while True:
-                ok, frame = cap.read()
-                if not ok:
-                    break
+            while not stop_event.is_set():
+                try:
+                    frame = latest_frame.get(timeout=0.5)
+                except Empty:
+                    continue
                 now = time.monotonic()
                 if now - last_sent < min_interval:
-                    time.sleep(0.01)
                     continue
                 detections = yolo_engine.predict_image(frame, conf=confidence, iou=iou)
                 annotated = draw_detections(frame, detections)
-                ok, buffer = cv2.imencode(".jpg", annotated)
+                ok, buffer = cv2.imencode(".jpg", annotated, encode_params)
                 if not ok:
                     continue
-                last_sent = now
+                last_sent = time.monotonic()
                 yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
         finally:
-            cap.release()
+            stop_event.set()
+            capture_thread.join(timeout=1.0)
 
     return frames()
 

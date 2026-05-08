@@ -83,10 +83,10 @@
       </div>
       <div v-if="detail?.source_type === 'video' && (detail.video_url || detail.video_stream_url)" class="history-video-player">
         <div class="preview-header"><div><span>视频回放</span><strong>{{ detail.video_url ? '本地检测后视频' : '检测帧流' }}</strong></div></div>
-        <video v-if="detail.video_url" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata"></video>
+        <video v-if="detail.video_url" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata" playsinline></video>
         <img v-else class="video-stream" :src="mediaUrl(detail.video_stream_url || '')" :alt="detail.file_name" />
       </div>
-      <div v-if="detail?.original_url || detail?.result_url" class="compare-grid history-preview">
+      <div v-if="detail?.source_type !== 'video' && (detail?.original_url || detail?.result_url)" class="compare-grid history-preview">
         <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
         <figure><img v-if="detail.result_url" :src="mediaUrl(detail.result_url)" :alt="detail.file_name" /><figcaption>检测图</figcaption></figure>
       </div>
