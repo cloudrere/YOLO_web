@@ -1159,7 +1159,7 @@ img {
 }
 
 .filter-bar .el-form-item {
-  margin: 0;
+  margin: 0 !important;
 }
 
 .filter-bar .el-button {
@@ -1554,14 +1554,144 @@ img {
   justify-content: flex-start;
 }
 
+.control-surface,
+.toolbar,
+.inline-actions,
+.form-actions,
+.filter-bar,
+.login-links,
+.table-actions,
+.wrap-actions,
+.stream-actions,
+.task-meta,
+.model-upload-zone,
+.assistant-actions,
+.training-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-bar,
+.inline-actions,
+.table-actions,
+.wrap-actions,
+.form-actions {
+  row-gap: 12px;
+}
+
+.filter-bar {
+  align-items: flex-end;
+}
+
+.filter-bar .el-form-item,
+.toolbar .el-form-item,
+.inline-actions .el-form-item,
+.table-actions .el-form-item,
+.form-actions .el-form-item {
+  margin: 0 !important;
+}
+
+.filter-bar .el-form-item__content,
+.toolbar .el-form-item__content,
+.inline-actions .el-form-item__content,
+.table-actions .el-form-item__content,
+.form-actions .el-form-item__content {
+  align-items: center;
+  gap: 10px;
+}
+
 .el-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-radius: 999px;
   font-weight: 700;
-  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background 0.18s var(--ease-out);
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background 0.18s var(--ease-out), border-color 0.18s var(--ease-out), color 0.18s var(--ease-out);
+}
+
+.el-button + .el-button {
+  margin-left: 0 !important;
+}
+
+.el-button--small {
+  min-height: 32px;
+  padding-inline: 13px;
+}
+
+.el-button--large {
+  min-height: 44px;
+  padding-inline: 22px;
+}
+
+.el-button.is-disabled,
+.el-button.is-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.58;
 }
 
 .el-button:hover:not(.is-disabled) {
   transform: translateY(-1px);
+}
+
+.el-button.is-text,
+.el-button.is-link {
+  min-height: 30px;
+  padding: 0 6px;
+  box-shadow: none !important;
+}
+
+.el-button.is-text:hover:not(.is-disabled),
+.el-button.is-link:hover:not(.is-disabled) {
+  transform: none;
+}
+
+.el-button > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-bar .el-input,
+.filter-bar .el-select,
+.filter-bar .el-date-editor {
+  min-width: 180px;
+}
+
+.filter-bar .el-date-editor--daterange,
+.filter-bar .el-date-editor--datetimerange {
+  min-width: 280px;
+}
+
+.form-actions,
+.assistant-actions {
+  justify-content: flex-end;
+}
+
+.inline-actions,
+.table-actions,
+.wrap-actions {
+  justify-content: flex-start;
+}
+
+.split-actions,
+.three-actions {
+  gap: 12px;
+}
+
+.split-actions .el-button,
+.three-actions .el-button {
+  min-height: 42px;
 }
 
 .el-button--primary {
@@ -1574,23 +1704,87 @@ img {
   box-shadow: 0 12px 24px rgba(31, 111, 91, 0.18);
 }
 
+.el-input,
+.el-select,
+.el-date-editor,
+.el-input-number {
+  vertical-align: middle;
+}
+
+.el-input,
+.el-select,
+.el-date-editor {
+  --el-component-size: 38px;
+}
+
+.el-input--large,
+.el-select--large,
+.el-date-editor--large {
+  --el-component-size: 44px;
+}
+
+.el-input--small,
+.el-select--small,
+.el-date-editor--small {
+  --el-component-size: 32px;
+}
+
 .el-input__wrapper,
 .el-select__wrapper,
+.el-date-editor.el-input__wrapper,
 .el-textarea__inner {
   border-radius: 14px !important;
   box-shadow: 0 0 0 1px rgba(31, 111, 91, 0.12) inset !important;
   background: rgba(255, 255, 255, 0.82) !important;
 }
 
+.el-input__wrapper,
+.el-select__wrapper,
+.el-date-editor.el-input__wrapper {
+  min-height: var(--el-component-size, 38px);
+  align-items: center;
+}
+
+.el-input__prefix,
+.el-input__suffix,
+.el-select__prefix,
+.el-select__suffix,
+.el-range-separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.el-input__inner,
+.el-select__selected-item,
+.el-range-input {
+  line-height: 1.35;
+}
+
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
+.el-date-editor.el-input__wrapper.is-focus,
 .el-textarea__inner:focus {
   box-shadow: 0 0 0 1px var(--color-primary) inset, 0 0 0 4px rgba(31, 111, 91, 0.1) !important;
 }
 
 .el-form-item__label {
+  min-height: 22px;
   color: #496157;
   font-weight: 700;
+  line-height: 1.35 !important;
+}
+
+.el-form--label-top .el-form-item__label {
+  margin-bottom: 7px !important;
+}
+
+.el-form-item {
+  margin-bottom: 18px;
+}
+
+.el-form-item:last-child {
+  margin-bottom: 0;
 }
 
 .el-upload {
@@ -1690,9 +1884,94 @@ img {
   padding: 20px 24px 28px !important;
 }
 
+.el-drawer__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px 22px !important;
+}
+
+.el-pagination {
+  margin-top: 18px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination .el-pager li {
+  min-width: 34px;
+  height: 34px;
+  line-height: 34px;
+  border-radius: 999px;
+}
+
+.el-upload-dragger,
+.upload-grid .el-upload-dragger,
+.mode-config .el-upload-dragger {
+  width: 100%;
+  min-height: 148px;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  border: 1px dashed rgba(31, 111, 91, 0.32) !important;
+  border-radius: 22px !important;
+  background:
+    linear-gradient(135deg, rgba(243, 247, 239, 0.9), rgba(255, 255, 255, 0.64)),
+    linear-gradient(rgba(31, 111, 91, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 111, 91, 0.04) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 24px 24px, 24px 24px !important;
+}
+
+.upload-card .el-button,
+.assistant-tool-panel .el-button,
+.mode-config .el-button.full {
+  min-height: 44px;
+}
+
+.el-table .cell {
+  line-height: 1.55;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.el-table .el-button {
+  min-height: 32px;
+}
+
 .el-dialog {
   border-radius: 24px !important;
   overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 22px 24px 12px !important;
+  margin-right: 0 !important;
+}
+
+.el-dialog__body {
+  padding: 18px 24px 22px !important;
+}
+
+.el-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px 22px !important;
+}
+
+.el-message-box__btns {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.el-message-box__btns .el-button {
+  margin-left: 0 !important;
 }
 
 .el-empty__description p {
@@ -2679,12 +2958,34 @@ body::after {
   .filter-bar .el-form-item__content,
   .filter-bar .el-input,
   .filter-bar .el-select,
+  .filter-bar .el-date-editor,
   .filter-bar .el-button,
   .compact-form-card .el-form-item__content,
   .compact-form-card .el-input,
   .compact-form-card .el-select,
   .model-upload-zone .el-button {
     width: 100% !important;
+    min-width: 0;
+  }
+
+  .form-actions,
+  .assistant-actions,
+  .table-actions,
+  .inline-actions,
+  .wrap-actions,
+  .model-upload-zone,
+  .training-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions .el-button,
+  .assistant-actions .el-button,
+  .table-actions .el-button,
+  .inline-actions .el-button,
+  .wrap-actions .el-button,
+  .training-actions .el-button {
+    width: 100%;
   }
 
   .preview-canvas {
