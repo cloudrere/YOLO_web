@@ -50,6 +50,19 @@ def result_row_to_dict(row: DetectionResult) -> dict:
     }
 
 
+class DetectionVideoWriter:
+    def __init__(self, writer: cv2.VideoWriter, size: tuple[int, int], codec: str):
+        self.writer = writer
+        self.size = size
+        self.codec = codec
+
+    def write(self, frame) -> None:
+        self.writer.write(normalize_video_frame(frame, self.size))
+
+    def release(self) -> None:
+        self.writer.release()
+
+
 def record_file_url(record_id: int, kind: str) -> str:
     return f"/api/detect/artifacts/{record_id}?kind={kind}"
 
@@ -161,7 +174,7 @@ def resolve_record_artifact(db: Session, record_id: int, kind: str = "result") -
     if kind in {"video", "result"}:
         video_path = resolve_record_video_file(db, record)
         if video_path is not None:
-            return video_path
+            return ensure_browser_playable_video(video_path)
     selected = record.original_path if kind == "original" else record.result_path
     if not selected:
         raise AppException(40406, "Detection artifact not found", 404)
@@ -212,13 +225,78 @@ def save_temp_detection_image(image_path: Path, detections: list[dict]) -> Path:
     return output_path
 
 
-def create_video_writer(path: Path, frame, fps: float) -> cv2.VideoWriter:
+def create_video_writer(path: Path, frame, fps: float) -> DetectionVideoWriter:
     path.parent.mkdir(parents=True, exist_ok=True)
-    height, width = frame.shape[:2]
-    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), max(1.0, fps), (width, height))
-    if not writer.isOpened():
-        raise AppException(50021, "Cannot create detection video file")
-    return writer
+    size = normalize_video_size(frame.shape[1], frame.shape[0])
+    for codec in ("avc1", "H264", "X264", "mp4v"):
+        writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*codec), max(1.0, fps), size)
+        if writer.isOpened():
+            return DetectionVideoWriter(writer, size, codec)
+        writer.release()
+    raise AppException(50021, "Cannot create detection video file")
+
+
+def normalize_video_size(width: int, height: int) -> tuple[int, int]:
+    return (width if width % 2 == 0 else width - 1, height if height % 2 == 0 else height - 1)
+
+
+def normalize_video_frame(frame, size: tuple[int, int]):
+    width, height = size
+    if frame.shape[1] == width and frame.shape[0] == height:
+        return frame
+    return cv2.resize(frame, size)
+
+
+def video_codec(path: Path) -> str:
+    cap = cv2.VideoCapture(str(path))
+    try:
+        if not cap.isOpened():
+            return ""
+        fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+        return "".join(chr((fourcc >> 8 * index) & 0xFF) for index in range(4)).strip().lower()
+    finally:
+        cap.release()
+
+
+def ensure_browser_playable_video(path: Path) -> Path:
+    if video_codec(path) in {"h264", "avc1"}:
+        return path
+    output = path.with_name(f"{path.stem}_browser.mp4")
+    if output.exists() and output.stat().st_mtime >= path.stat().st_mtime and video_codec(output) in {"h264", "avc1"}:
+        return output
+    converted = transcode_browser_video(path, output)
+    return converted if converted is not None else path
+
+
+def transcode_browser_video(source: Path, target: Path) -> Path | None:
+    cap = cv2.VideoCapture(str(source))
+    if not cap.isOpened():
+        return None
+    temp = target.with_suffix(".tmp.mp4")
+    writer: DetectionVideoWriter | None = None
+    try:
+        fps = cap.get(cv2.CAP_PROP_FPS) or max(1, settings.video_sample_fps)
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            if writer is None:
+                writer = create_video_writer(temp, frame, fps)
+                if writer.codec == "mp4v":
+                    writer.release()
+                    writer = None
+                    temp.unlink(missing_ok=True)
+                    return None
+            writer.write(frame)
+    finally:
+        cap.release()
+        if writer is not None:
+            writer.release()
+    if temp.exists() and temp.stat().st_size > 0 and video_codec(temp) in {"h264", "avc1"}:
+        temp.replace(target)
+        return target
+    temp.unlink(missing_ok=True)
+    return None
 
 
 def detect_image(
@@ -433,7 +511,7 @@ def process_video_task(task: Task, db: Session) -> dict:
     output_dir = settings.results_path / "video_frames" / str(task.id)
     output_dir.mkdir(parents=True, exist_ok=True)
     video_output_path = settings.results_path / "videos" / f"task_{task.id}.mp4"
-    writer: cv2.VideoWriter | None = None
+    writer: DetectionVideoWriter | None = None
     processed_frames = 0
     sampled_frames = 0
     all_detections: list[dict] = []
