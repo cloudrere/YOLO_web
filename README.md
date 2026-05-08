@@ -1,23 +1,25 @@
-# 工业级可复用 YOLO 视觉检测 Web 系统模板
+# YOLO 视觉检测系统
 
-这是一个中文化、通用化的 YOLOv8 目标检测 Web 系统模板，面向任意目标检测任务。系统不绑定车辆、鱼类、工业缺陷等具体业务，替换模型即可复用到新项目。
+这是一个中文化、通用化、可复用的 YOLOv8 目标检测 Web 系统，面向图片、批量图片、视频文件和实时视频流检测场景。系统不绑定车辆、鱼类、工业缺陷等具体业务，替换模型和类别映射后即可复用到新的目标检测项目。
 
 ## 功能特性
 
 - YOLOv8 工程化封装：单例加载、GPU/CPU/自动设备切换、模型热切换、线程安全推理
-- 检测入口：单张图片、批量图片、视频异步任务、实时视频流；实时流使用最新帧低延迟推理，减少画面积压卡顿
-- 检测参数：置信度、IoU 阈值、上传到历史记录或仅本地检测
-- 检测展示：原图与检测图对比、英文类别与中文类别同时显示、结果表格、不同类别检测框自动分色
-- 任务控制：批量图片、视频文件、实时视频流支持开始、暂停/继续、结束
+- 检测入口：单图检测、批量图片检测、视频异步检测、实时摄像头/RTSP/HTTP(S) 流检测
+- 检测参数：置信度阈值、IoU 阈值、保存到历史记录或仅本地临时检测
+- 检测展示：原图/检测图对比、视频帧流、检测后本地视频、目标结果表格、不同类别检测框自动分色
+- 任务控制：批量图片、视频文件、实时视频流支持开始、暂停/继续、结束和进度反馈
+- 历史管理：缩略图、视频第一帧、检测详情、中文类别查询、用户查询、Excel 导出、全选批量删除
+- 视频回放：历史详情优先播放后端 artifact mp4，不暴露本地磁盘路径；支持 HTTP Range，旧 FMP4/mp4v 视频会自动生成 H.264 `_browser.mp4` 兼容副本，仍无法解码时切换为帧流兜底
+- 模型管理：模型上传、登记路径必填校验、前端连续序号展示、完整路径换行展示、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护
 - 权限系统：登录、注册、简单忘记密码、JWT、用户、角色、权限码、RBAC 路由守卫
-- Dashboard：基础检测统计；管理员额外查看总用户数、用户检测统计、模型数、异常日志数、AI 调用次数、CPU/内存/GPU/温度状态和 CUDA 诊断
-- 历史管理：缩略图、检测后本地视频回放、视频第一帧与播放入口、检测详情、中文类别查询、用户查询、Excel 报表导出、全选批量删除；视频详情只展示检测后视频回放，mp4 artifact 支持 Range 播放，旧 FMP4/mp4v 视频会自动生成 H.264 兼容副本，仍无法播放时使用帧流兜底
-- 训练分析：上传或选择 YOLO `results.csv`，按 epoch 连续绘制 Precision / Recall、mAP、Loss、学习率曲线，并生成雷达图、柱状图、导出分析报告、删除当前分析、清空全部分析和 AI 训练诊断
-- 模型管理：上传模型、登记模型路径必填校验、前端连续序号展示、完整路径换行展示、激活模型、删除非激活模型、修改显示名称、GPU 设备切换、类别中英文映射维护；普通用户可查看和上传，删除等管理操作需管理权限
-- 日志中心：级别、模块、类型支持中文显示，同时保留英文字段，支持单个删除、批量删除和按日期删除
-- 系统维护：管理员可查看 GPU/CUDA/torch、当前激活模型、数据库表、storage/logs 目录和磁盘空间状态；支持清除检测历史、清除日志、清除非激活模型和一键恢复初始化
-- AI 助手：独立“AI深度学习助手”，支持 DeepSeek/OpenAI 兼容问答模块，不影响检测主流程
-- 中文前端：Vue3 + Element Plus + ECharts，工业检测中台风格与响应式布局
+- 用户管理：用户查询、新建用户、启用/停用、角色维护、重置密码、创建时间和最后登录时间展示
+- Dashboard：检测统计、类别分布、趋势图；管理员可查看用户数、模型数、异常日志数、AI 调用次数、CPU/内存/GPU/温度状态和 CUDA 诊断
+- 日志中心：级别、模块、类型中文化展示，支持单条删除、批量删除和按日期删除
+- 训练分析：上传或选择 YOLO `results.csv`，绘制 Precision/Recall、mAP、Loss、学习率曲线，生成雷达图、柱状图、导出分析报告、删除当前分析、清空全部分析和 AI 训练诊断
+- 系统维护：检查 GPU/CUDA/torch、当前激活模型、数据库表、storage/logs 目录和磁盘空间；支持清除检测历史、清除日志、清除非激活模型、一键恢复初始化
+- AI 助手：独立“AI深度学习助手”，支持 DeepSeek/OpenAI 兼容问答接口，不影响检测主流程
+- 中文前端：Vue3 + Element Plus + ECharts，已统一按钮、输入框、弹窗、抽屉、表格、查询条件区和响应式布局样式
 
 ## 技术栈
 
@@ -25,13 +27,14 @@
 - 前端：Vue3、Vite、TypeScript、Pinia、Vue Router、Axios、Element Plus、ECharts
 - 任务：进程内后台队列，支持 `pending/running/paused/cancelled/done/failed`、失败重试、视频异步处理
 - 报表与状态：openpyxl、psutil、httpx、nvidia-ml-py
+- 依赖文件：后端 `backend/requirements.txt`，前端 `frontend/package.json`
 
 ## 目录结构
 
 ```text
 backend/
   app/
-    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、训练分析、系统维护、AI助手接口
+    api/          # 认证、检测、历史、模型、管理、日志、仪表盘、训练分析、系统维护、AI 助手接口
     constants/    # COCO 类别中英文字典
     core/         # YOLO 引擎、推理服务、任务队列、依赖、配置
     db/           # 数据库连接、初始化和轻量 schema patch
@@ -52,9 +55,38 @@ storage/
   models/         # YOLO 模型文件
 ```
 
+## 环境要求
+
+- Python：建议使用 Anaconda `ultralytics` 环境
+- Node.js：建议 Node.js 18+
+- GPU：可选；如需 CUDA 推理，请确保当前 Python 环境中的 PyTorch 与本机 CUDA/显卡驱动匹配
+- 默认数据库：SQLite，数据库文件位于后端目录下的 `yolo_web.db`
+
+## 后端依赖
+
+后端依赖文件位于：
+
+```text
+backend/requirements.txt
+```
+
+当前依赖包括：FastAPI、Uvicorn、SQLAlchemy、Pydantic、JWT/密码加密、Ultralytics、Torch、OpenCV、Pillow、NumPy、openpyxl、psutil、nvidia-ml-py、httpx 等。
+
+在项目推荐的 Anaconda `ultralytics` 环境中安装：
+
+```bash
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r backend/requirements.txt
+```
+
+如果已经进入 `backend` 目录，也可以执行：
+
+```bash
+/e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r requirements.txt
+```
+
 ## 后端启动
 
-当前项目建议使用 Anaconda `ultralytics` 环境，依赖也安装到该环境中：
+推荐使用指定的 Anaconda `ultralytics` 环境运行：
 
 ```bash
 cd E:/DeepLearning/yolo_web/backend
@@ -93,19 +125,40 @@ cp .env.example .env
 npm run dev
 ```
 
-前端地址：`http://localhost:5173`
+前端地址：
+
+```text
+http://localhost:5173
+```
+
+生产构建：
+
+```bash
+npm --prefix frontend run build
+```
 
 ## 配置说明
 
 后端 `.env` 主要配置：
 
 ```env
+APP_NAME=Reusable YOLO Vision Platform
+APP_ENV=local
+SECRET_KEY=change-this-secret-key
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
 DATABASE_URL=sqlite:///./yolo_web.db
-SECRET_KEY=please-change-me
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123456
+UPLOAD_DIR=../storage/uploads
+RESULT_DIR=../storage/results
+MODEL_DIR=../storage/models
+DEFAULT_MODEL_PATH=
 YOLO_DEVICE=auto
 CONFIDENCE_THRESHOLD=0.25
 IOU_THRESHOLD=0.7
 VIDEO_SAMPLE_FPS=2
+TASK_MAX_RETRIES=2
 STREAM_FRAME_TIMEOUT_SECONDS=30
 MAX_UPLOAD_MB=512
 AI_ASSISTANT_BASE_URL=
@@ -114,7 +167,7 @@ AI_ASSISTANT_MODEL=deepseek-chat
 AI_ASSISTANT_TIMEOUT_SECONDS=30
 ```
 
-AI 助手使用 OpenAI 兼容的 `/chat/completions` 接口。没有配置 `AI_ASSISTANT_API_KEY` 时，前端会显示“未配置”，检测主流程不受影响。
+AI 助手使用 OpenAI 兼容的 `/chat/completions` 接口。未配置 `AI_ASSISTANT_API_KEY` 时，前端会显示“未配置”，检测主流程不受影响。
 
 ## 模型使用
 
@@ -134,13 +187,13 @@ yolov8n.pt
 
 ## 类别中英映射
 
-后端内置 YOLOv8 COCO 80 类英文到中文默认字典，位置：
+后端内置 YOLOv8 COCO 80 类英文到中文默认字典：
 
 ```text
 backend/app/constants/coco_classes.py
 ```
 
-模型管理页会读取模型类别，支持手动维护中文名称。后端数据库字段继续保存英文类别，API 额外返回中文字段，例如：
+模型管理页会读取模型类别，支持手动维护中文名称。后端数据库字段继续保存英文类别，API 额外返回中文字段：
 
 ```json
 {
@@ -159,7 +212,9 @@ backend/app/constants/coco_classes.py
 - `iou`：IoU 阈值
 - `save_history`：是否写入历史记录
 
-`save_history=true` 时，系统写入数据库并保存原图、检测图；视频任务完成后会把检测后视频保存到 `storage/results/videos/`，历史详情优先通过后端 artifact URL 播放本地 mp4，不直接暴露本地磁盘路径。后端支持 HTTP Range，并优先写出 H.264 mp4；旧 FMP4/mp4v 视频在访问时会自动生成 `_browser.mp4` 兼容副本，浏览器仍无法解码时前端会自动切换为检测帧流兜底。`save_history=false` 时，只保存临时预览文件，不写历史表，适合临时调参。智能检测页面不再展示 AI 分析，检测结果以图片、帧流和目标表格为主。
+`save_history=true` 时，系统写入数据库并保存原图、检测图；视频任务完成后会把检测后视频保存到 `storage/results/videos/`，历史详情优先通过后端 artifact URL 播放本地 mp4，不直接暴露本地磁盘路径。后端支持 HTTP Range，并优先写出 H.264 mp4；旧 FMP4/mp4v 视频在访问时会自动生成 `_browser.mp4` 兼容副本，浏览器仍无法解码时前端会自动切换为检测帧流兜底。
+
+`save_history=false` 时，只保存临时预览文件，不写历史表，适合临时调参。
 
 ## 核心接口
 
@@ -195,7 +250,7 @@ backend/app/constants/coco_classes.py
 
 - `POST /api/training-analysis/upload`：上传 YOLO `results.csv`，写入训练分析记录并返回解析摘要
 - `GET /api/training-analysis/files`：列出已上传 CSV 和数据库记录
-- `GET /api/training-analysis/summary?name=`：读取指定 CSV 并返回曲线、雷达图、柱状图和关键指标
+- `GET /api/training-analysis/summary?name=`：读取指定 CSV 并返回图表数据与关键指标
 - `GET /api/training-analysis/export?name=`：导出当前训练分析报告
 - `DELETE /api/training-analysis/{name}`：删除当前分析记录和对应 CSV 文件
 - `DELETE /api/training-analysis/clear`：清空全部训练分析记录和 CSV 文件
@@ -247,16 +302,34 @@ backend/app/constants/coco_classes.py
 
 ## 验证命令
 
+后端编译检查：
+
 ```bash
 /e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m compileall backend/app
+```
+
+前端构建检查：
+
+```bash
 npm --prefix frontend run build
 ```
 
-如需安装后端新增依赖：
+依赖安装检查：
 
 ```bash
 /e/software/ADeepLearning/Anaconda/envs/ultralytics/python.exe -m pip install -r backend/requirements.txt
 ```
+
+## 常见目录和数据
+
+- 上传文件：`storage/uploads/`
+- 检测结果：`storage/results/`
+- 检测后视频：`storage/results/videos/`
+- 视频抽样帧：`storage/results/video_frames/`
+- 训练分析 CSV：`storage/results/training_analysis/`
+- 模型文件：`storage/models/`
+- 后端日志：`backend/logs/`
+- SQLite 数据库：`backend/yolo_web.db`
 
 ## 生产扩展建议
 
