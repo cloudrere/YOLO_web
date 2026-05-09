@@ -1,51 +1,47 @@
 <template>
   <AppLayout>
-    <section class="dashboard-banner glass-card">
-      <div>
-        <span class="eyebrow dark">实时统计</span>
-        <h2>检测任务运行概览</h2>
-        <p>多维展示检测趋势、用户分布、模型调用、AI 调用与 GPU/CPU 资源状态。</p>
+    <div class="ops-page-title">
+      <h2>检测任务运行概览</h2>
+      <el-button size="small" :loading="loading" @click="load">刷新</el-button>
+    </div>
+
+    <div class="ops-metrics">
+      <div v-for="card in cards" :key="card.label" class="ops-metric">
+        <span class="metric-label">{{ card.label }}</span>
+        <span class="metric-value">{{ card.value }}</span>
+        <span class="metric-desc">{{ card.desc }}</span>
       </div>
-      <el-button type="primary" :loading="loading" @click="load">刷新数据</el-button>
-    </section>
+    </div>
 
-    <section class="grid metrics">
-      <el-card v-for="card in cards" :key="card.label" shadow="never" class="metric-card">
-        <span>{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.desc }}</small>
-      </el-card>
-    </section>
+    <div v-if="metrics?.admin" class="ops-metrics">
+      <div v-for="card in adminCards" :key="card.label" class="ops-metric">
+        <span class="metric-label">{{ card.label }}</span>
+        <span class="metric-value">{{ card.value }}</span>
+        <span class="metric-desc">{{ card.desc }}</span>
+      </div>
+    </div>
 
-    <section v-if="metrics?.admin" class="grid four admin-metrics">
-      <el-card v-for="card in adminCards" :key="card.label" shadow="never" class="metric-card compact-metric">
-        <span>{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.desc }}</small>
-      </el-card>
-    </section>
-
-    <section v-if="metrics?.admin" class="grid two system-grid">
-      <el-card shadow="never" class="panel-card status-panel">
+    <div v-if="metrics?.admin" class="ops-panel cols-2">
+      <el-card shadow="never">
         <template #header>系统资源快照</template>
-        <div class="system-status-list">
-          <div><span>CPU 使用率</span><strong>{{ formatPercent(system?.cpu_percent) }}</strong></div>
-          <div><span>内存使用率</span><strong>{{ formatPercent(system?.memory?.percent) }}</strong></div>
-          <div><span>可用内存</span><strong>{{ formatBytes(system?.memory?.available) }}</strong></div>
-          <div><span>GPU 温度</span><strong>{{ system?.gpu_devices?.[0]?.temperature != null ? system.gpu_devices[0].temperature + '°C' : '不可用' }}</strong></div>
+        <div class="ops-info-grid">
+          <div class="ops-info-item"><span>CPU 使用率</span><strong>{{ formatPercent(system?.cpu_percent) }}</strong></div>
+          <div class="ops-info-item"><span>内存使用率</span><strong>{{ formatPercent(system?.memory?.percent) }}</strong></div>
+          <div class="ops-info-item"><span>可用内存</span><strong>{{ formatBytes(system?.memory?.available) }}</strong></div>
+          <div class="ops-info-item"><span>GPU 温度</span><strong>{{ system?.gpu_devices?.[0]?.temperature != null ? system.gpu_devices[0].temperature + '°C' : '不可用' }}</strong></div>
         </div>
-        <div ref="resourceEl" class="chart mini-chart"></div>
+        <div ref="resourceEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card status-panel">
+      <el-card shadow="never">
         <template #header>GPU / CUDA 诊断</template>
-        <div class="gpu-diagnostic-list">
-          <div v-for="check in system?.diagnostics.checks || []" :key="check.name" class="diagnostic-row">
-            <el-tag :type="diagnosticTag(check.status)">{{ check.name }}</el-tag>
-            <span>{{ check.message }}</span>
+        <div class="ops-queue">
+          <div v-for="check in system?.diagnostics.checks || []" :key="check.name" class="ops-queue-item">
+            <el-tag :type="diagnosticTag(check.status)" size="small">{{ check.name }}</el-tag>
+            <span class="q-name">{{ check.message }}</span>
           </div>
         </div>
-        <div v-if="system?.gpu_devices.length" class="gpu-list">
-          <div v-for="gpu in system.gpu_devices" :key="gpu.index" class="gpu-card">
+        <div v-if="system?.gpu_devices.length" class="flex-gap mb">
+          <div v-for="gpu in system.gpu_devices" :key="gpu.index" class="ops-info-item">
             <strong>{{ gpu.name }}</strong>
             <span>显存：{{ formatBytes(gpu.allocated_memory) }} / {{ formatBytes(gpu.total_memory) }}</span>
             <span>温度：{{ gpu.temperature ?? '不可用' }}</span>
@@ -53,44 +49,44 @@
         </div>
         <el-empty v-else description="暂无可用 GPU 信息" />
       </el-card>
-    </section>
+    </div>
 
-    <section class="grid two chart-grid">
-      <el-card shadow="never" class="panel-card chart-panel">
+    <div class="ops-panel cols-2">
+      <el-card shadow="never">
         <template #header>近 7 日检测趋势</template>
-        <div ref="trendEl" class="chart"></div>
+        <div ref="trendEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never">
         <template #header>用户检测趋势</template>
-        <div ref="userTrendEl" class="chart"></div>
+        <div ref="userTrendEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never">
         <template #header>类别分布</template>
-        <div ref="classEl" class="chart"></div>
+        <div ref="classEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never">
         <template #header>模型调用排行</template>
-        <div ref="modelEl" class="chart"></div>
+        <div ref="modelEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never">
         <template #header>AI 调用趋势</template>
-        <div ref="aiEl" class="chart"></div>
+        <div ref="aiEl" class="ops-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never">
         <template #header>高频检测类别</template>
-        <div class="top-class-list">
-          <div v-for="item in metrics?.top_detected_classes || []" :key="item.class">
-            <span>{{ item.class_zh || item.class }}</span>
+        <div class="ops-queue">
+          <div v-for="item in metrics?.top_detected_classes || []" :key="item.class" class="ops-queue-item">
+            <span class="q-name">{{ item.class_zh || item.class }}</span>
             <strong>{{ item.count }}</strong>
           </div>
         </div>
         <el-empty v-if="!metrics?.top_detected_classes.length" description="暂无类别统计" />
       </el-card>
-    </section>
+    </div>
 
-    <el-card v-if="metrics?.admin" shadow="never" class="panel-card">
+    <el-card v-if="metrics?.admin" shadow="never">
       <template #header>不同用户检测统计</template>
-      <div class="table-scroll">
+      <div class="ops-table-wrap">
         <el-table :data="metrics.admin.user_detection_stats" empty-text="暂无用户检测统计">
           <el-table-column prop="user_id" label="用户ID" width="100" />
           <el-table-column prop="username" label="用户名" />
@@ -185,7 +181,7 @@ function renderTrendChart() {
   const chart = makeChart(trendEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#1f6f5b'],
+    color: ['#409eff'],
     tooltip: { trigger: 'axis' },
     grid: { left: 36, right: 16, top: 28, bottom: 28 },
     xAxis: { type: 'category', data: metrics.value.daily_trend_7d.map((item) => item.date.slice(5)) },
@@ -210,7 +206,7 @@ function renderClassChart() {
   const chart = makeChart(classEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#d39a2d'],
+    color: ['#67c23a'],
     tooltip: { trigger: 'axis' },
     grid: { left: 36, right: 16, top: 28, bottom: 48 },
     xAxis: { type: 'category', data: metrics.value.class_distribution.map((item) => item.class_zh || item.class), axisLabel: { rotate: 25 } },
@@ -222,7 +218,7 @@ function renderModelChart() {
   const chart = makeChart(modelEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#2f7d67'],
+    color: ['#409eff'],
     tooltip: { trigger: 'axis' },
     grid: { left: 92, right: 18, top: 24, bottom: 24 },
     xAxis: { type: 'value' },
@@ -234,7 +230,7 @@ function renderAiChart() {
   const chart = makeChart(aiEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#b88427'],
+    color: ['#e6a23c'],
     tooltip: { trigger: 'axis' },
     grid: { left: 36, right: 16, top: 28, bottom: 28 },
     xAxis: { type: 'category', data: metrics.value.ai_call_trend_7d.map((item) => item.date.slice(5)) },
