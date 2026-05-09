@@ -1,16 +1,16 @@
 <template>
   <div class="login-page">
-    <section class="login-hero zh-hero">
-      <span class="eyebrow">目标检测工作台</span>
-      <h1>YOLO 视觉检测系统</h1>
-      <p>面向图片、视频与实时流的智能检测系统。模型驱动、权限完备、结果可追溯，快速连接你的 YOLO 检测模型。</p>
+    <section class="login-hero">
+      <span class="eyebrow">智能视觉检测平台</span>
+      <h1>YOLO<span> 视觉检测系统</span></h1>
+      <p>面向图片、视频与实时流的智能检测系统。模型驱动、权限完备、结果可追溯，快速连接你的 YOLO 检测模型，构建安防级视觉识别能力。</p>
       <div class="hero-stats">
         <div><strong>YOLOv8</strong><span>工程化封装</span></div>
         <div><strong>RBAC</strong><span>权限体系</span></div>
         <div><strong>Video</strong><span>异步任务</span></div>
       </div>
     </section>
-    <el-card class="login-card glass-card">
+    <div class="login-card">
       <span class="eyebrow dark">{{ modeMeta.eyebrow }}</span>
       <h2>{{ modeMeta.title }}</h2>
       <p class="form-subtitle">{{ modeMeta.subtitle }}</p>
@@ -36,7 +36,7 @@
         </div>
         <p class="hint">默认账号：admin / admin123456；注册账号默认获得操作员权限。</p>
       </el-form>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -54,7 +54,7 @@ const mode = ref<'login' | 'register' | 'reset'>('login')
 const form = reactive({ username: 'admin', password: 'admin123456' })
 
 const modeMeta = computed(() => ({
-  login: { eyebrow: '安全登录', title: '进入检测工作台', subtitle: '使用管理员或已授权账号访问模型、检测、历史与日志模块。', button: '登录系统' },
+  login: { eyebrow: '安全登录', title: '进入监控中心', subtitle: '使用管理员或已授权账号访问检测、事件档案、审计日志与模型管理。', button: '登录系统' },
   register: { eyebrow: '注册账号', title: '创建操作员账号', subtitle: '输入用户名和密码即可注册普通账号，默认分配操作员权限。', button: '注册账号' },
   reset: { eyebrow: '忘记密码', title: '重置账号密码', subtitle: '输入用户名和新密码即可完成重置，不引入额外验证流程。', button: '重置密码' },
 }[mode.value]))
@@ -63,6 +63,7 @@ function setMode(nextMode: 'login' | 'register' | 'reset') {
   mode.value = nextMode
   if (nextMode !== 'login' && form.username === 'admin') Object.assign(form, { username: '', password: '' })
 }
+
 async function submit() {
   if (!form.username || !form.password) {
     ElMessage.warning('请输入用户名和密码')

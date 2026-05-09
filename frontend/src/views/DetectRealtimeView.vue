@@ -1,19 +1,23 @@
 <template>
   <AppLayout>
+    <!-- 顶部状态条 -->
     <section class="detection-status-strip panel-card">
       <div>
-        <span class="eyebrow dark">实时视频流检测</span>
+        <span class="eyebrow">实时监控</span>
         <h2>摄像头与流媒体在线推理</h2>
-        <p>连接本机摄像头、RTSP 或 HTTP(S) 流，实时返回标注画面，暂停会断开连接。</p>
+        <p>连接本机摄像头、RTSP 或 HTTP(S) 流，实时返回 YOLO 标注画面。</p>
       </div>
       <div class="status-pills">
-        <el-tag :type="active ? 'success' : 'info'">{{ active ? '已连接' : '未连接' }}</el-tag>
+        <el-tag :type="active ? 'success' : 'info'">{{ active ? '● 已连接' : '○ 未连接' }}</el-tag>
         <el-tag>{{ params.confidence.toFixed(2) }} / {{ params.iou.toFixed(2) }}</el-tag>
       </div>
     </section>
 
-    <section class="detection-workbench single-flow">
-      <aside class="detection-control-rail panel-card">
+    <!-- 三栏核心区域：左侧源 → 中间画面 → 右侧状态 -->
+    <section class="grid three" style="align-items: stretch; margin-bottom: var(--gap);">
+      <!-- 左侧：源配置 -->
+      <el-card shadow="never" class="panel-card detection-control-rail">
+        <template #header>信号源配置</template>
         <div class="parameter-panel">
           <h3>检测参数</h3>
           <label>置信度：{{ params.confidence.toFixed(2) }}</label>
@@ -22,7 +26,7 @@
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="active" />
         </div>
         <div class="mode-config">
-          <h3>实时来源</h3>
+          <h3>视频源地址</h3>
           <el-input v-model="source" size="large" placeholder="摄像头 0 或 RTSP/HTTP 地址" :disabled="active" />
           <div class="split-actions three-actions">
             <el-button type="primary" size="large" :disabled="active || !source.trim()" @click="startRealtime">开始</el-button>
@@ -32,34 +36,35 @@
           <p class="control-note">暂停会断开当前 MJPEG 连接，继续时按当前参数重新连接。</p>
           <p v-if="errorText" class="error-text">{{ errorText }}</p>
         </div>
-      </aside>
+      </el-card>
 
-      <main class="detection-preview-stage panel-card">
-        <div class="preview-header">
-          <div><span>实时画面</span><strong>{{ previewTitle }}</strong></div>
-          <el-tag :type="active ? 'success' : paused ? 'warning' : 'info'">{{ statusText }}</el-tag>
-        </div>
+      <!-- 中间：大画面 -->
+      <el-card shadow="never" class="panel-card detection-preview-stage" style="grid-column: span 1;">
+        <template #header>
+          <div class="preview-header" style="margin-bottom: 0;">
+            <div><span>实时监控画面</span><strong>{{ active ? '● 在线' : paused ? '⏸ 已暂停' : '○ 离线' }}</strong></div>
+            <el-tag :type="active ? 'success' : paused ? 'warning' : 'info'">{{ active ? '推流中' : paused ? '已暂停' : '待连接' }}</el-tag>
+          </div>
+        </template>
         <div class="preview-canvas">
-          <img v-if="streamUrl" class="video-stream" :src="streamUrl" alt="实时视频流检测" />
+          <img v-if="streamUrl" class="video-stream" :src="streamUrl" alt="实时视频流检测" style="margin-top: 0; max-height: none;" />
           <el-empty v-else :description="paused ? '流已暂停，继续后重新连接' : '连接实时流后显示标注画面'" />
         </div>
-        <div class="preview-metrics">
-          <div><strong>{{ elapsed }}</strong><span>运行秒数</span></div>
-          <div><strong>{{ source || '0' }}</strong><span>来源</span></div>
-          <div><strong>{{ active ? 'ON' : 'OFF' }}</strong><span>连接状态</span></div>
-        </div>
-      </main>
-    </section>
+      </el-card>
 
-    <section class="detection-inspector panel-card">
-      <div class="inspector-header">
-        <div><span class="eyebrow dark">实时状态面板</span><h3>连接与帧率信息</h3></div>
-        <el-button :disabled="!active && !paused" @click="stopRealtime">清除结果</el-button>
-      </div>
-      <div class="realtime-guide">
-        <strong>{{ statusText }}</strong>
-        <p>来源：{{ source || '0' }}；运行时长：{{ elapsed }} 秒；协议：MJPEG。</p>
-      </div>
+      <!-- 右侧：实时状态 -->
+      <el-card shadow="never" class="panel-card">
+        <template #header>连接状态</template>
+        <div class="realtime-guide" style="margin-bottom: 16px;">
+          <strong :style="{ color: active ? 'var(--status-online)' : paused ? 'var(--status-warning)' : 'var(--text-muted)' }">{{ active ? '● 实时检测运行中' : paused ? '⏸ 实时检测已暂停' : '○ 实时检测未连接' }}</strong>
+          <p>来源：{{ source || '0' }}；运行时长：{{ elapsed }} 秒；协议：MJPEG。</p>
+        </div>
+        <div class="preview-metrics" style="grid-template-columns: 1fr;">
+          <div><strong>{{ elapsed }}</strong><span>运行秒数</span></div>
+          <div><strong>{{ source || '0' }}</strong><span>信号来源</span></div>
+          <div><strong>{{ active ? 'ONLINE' : 'OFFLINE' }}</strong><span>连接状态</span></div>
+        </div>
+      </el-card>
     </section>
   </AppLayout>
 </template>
@@ -84,8 +89,6 @@ const elapsed = computed(() => {
   tick.value
   return startedAt.value ? Math.floor((Date.now() - startedAt.value) / 1000) : 0
 })
-const previewTitle = computed(() => (active.value ? '实时检测中' : paused.value ? '已暂停' : '未连接'))
-const statusText = computed(() => (active.value ? '实时检测正在运行' : paused.value ? '实时检测已暂停' : '实时检测未连接'))
 
 function startRealtime() {
   streamUrl.value = realtimeStreamUrl(source.value, { confidence: params.confidence, iou: params.iou })
@@ -95,9 +98,7 @@ function startRealtime() {
   errorText.value = ''
   ElMessage.success('实时流已连接')
   window.clearInterval(timer)
-  timer = window.setInterval(() => {
-    tick.value += 1
-  }, 1000)
+  timer = window.setInterval(() => { tick.value += 1 }, 1000)
 }
 function togglePause() {
   if (streamUrl.value) {

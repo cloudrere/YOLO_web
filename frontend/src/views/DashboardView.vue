@@ -1,14 +1,16 @@
 <template>
   <AppLayout>
-    <section class="dashboard-banner glass-card">
+    <!-- 监控总览横幅 -->
+    <section class="dashboard-banner panel-card">
       <div>
-        <span class="eyebrow dark">实时统计</span>
+        <span class="eyebrow">实时监控中心</span>
         <h2>检测任务运行概览</h2>
         <p>多维展示检测趋势、用户分布、模型调用、AI 调用与 GPU/CPU 资源状态。</p>
       </div>
       <el-button type="primary" :loading="loading" @click="load">刷新数据</el-button>
     </section>
 
+    <!-- 核心指标卡片 -->
     <section class="grid metrics">
       <el-card v-for="card in cards" :key="card.label" shadow="never" class="metric-card">
         <span>{{ card.label }}</span>
@@ -17,16 +19,9 @@
       </el-card>
     </section>
 
-    <section v-if="metrics?.admin" class="grid four admin-metrics">
-      <el-card v-for="card in adminCards" :key="card.label" shadow="never" class="metric-card compact-metric">
-        <span>{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.desc }}</small>
-      </el-card>
-    </section>
-
-    <section v-if="metrics?.admin" class="grid two system-grid">
-      <el-card shadow="never" class="panel-card status-panel">
+    <!-- 今日事件 & 资源状态 -->
+    <section class="grid two">
+      <el-card shadow="never" class="panel-card">
         <template #header>系统资源快照</template>
         <div class="system-status-list">
           <div><span>CPU 使用率</span><strong>{{ formatPercent(system?.cpu_percent) }}</strong></div>
@@ -36,11 +31,11 @@
         </div>
         <div ref="resourceEl" class="chart mini-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card status-panel">
+      <el-card shadow="never" class="panel-card">
         <template #header>GPU / CUDA 诊断</template>
         <div class="gpu-diagnostic-list">
-          <div v-for="check in system?.diagnostics.checks || []" :key="check.name" class="diagnostic-row">
-            <el-tag :type="diagnosticTag(check.status)">{{ check.name }}</el-tag>
+          <div v-for="check in system?.diagnostics.checks || []" :key="check.name" class="diagnostic-row" :class="check.status">
+            <el-tag :type="diagnosticTag(check.status)" size="small">{{ check.name }}</el-tag>
             <span>{{ check.message }}</span>
           </div>
         </div>
@@ -48,13 +43,23 @@
           <div v-for="gpu in system.gpu_devices" :key="gpu.index" class="gpu-card">
             <strong>{{ gpu.name }}</strong>
             <span>显存：{{ formatBytes(gpu.allocated_memory) }} / {{ formatBytes(gpu.total_memory) }}</span>
-            <span>温度：{{ gpu.temperature ?? '不可用' }}</span>
+            <span>温度：{{ gpu.temperature ?? '不可用' }}°C</span>
           </div>
         </div>
         <el-empty v-else description="暂无可用 GPU 信息" />
       </el-card>
     </section>
 
+    <!-- 管理指标（仅管理员可见） -->
+    <section v-if="metrics?.admin" class="grid four admin-metrics">
+      <el-card v-for="card in adminCards" :key="card.label" shadow="never" class="metric-card compact-metric">
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
+        <small>{{ card.desc }}</small>
+      </el-card>
+    </section>
+
+    <!-- 图表区域 -->
     <section class="grid two chart-grid">
       <el-card shadow="never" class="panel-card chart-panel">
         <template #header>近 7 日检测趋势</template>
@@ -88,6 +93,7 @@
       </el-card>
     </section>
 
+    <!-- 用户检测统计表 -->
     <el-card v-if="metrics?.admin" shadow="never" class="panel-card">
       <template #header>不同用户检测统计</template>
       <div class="table-scroll">
@@ -160,7 +166,7 @@ function collectResourceSample() {
     time: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
     cpu: Number(system.value.cpu_percent || 0),
     memory: Number(system.value.memory?.percent || 0),
-    gpu: gpu ? Math.round((gpu.reserved_memory / Math.max(1, gpu.total_memory)) * 100) : 0,
+    gpu: gpu ? Math.round((gpu.allocated_memory / Math.max(1, gpu.total_memory)) * 100) : 0,
   })
   resourceSamples.value = resourceSamples.value.slice(-12)
 }
@@ -177,20 +183,27 @@ function renderCharts() {
 }
 function makeChart(el: HTMLElement | null) {
   if (!el) return null
-  const chart = echarts.init(el)
+  const chart = echarts.init(el, undefined, { devicePixelRatio: window.devicePixelRatio })
   charts.push(chart)
   return chart
+}
+function darkTooltip() {
+  return {
+    backgroundColor: '#131a24',
+    borderColor: '#212a38',
+    textStyle: { color: '#e2e7ee', fontSize: 12 },
+  }
 }
 function renderTrendChart() {
   const chart = makeChart(trendEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#1f6f5b'],
-    tooltip: { trigger: 'axis' },
-    grid: { left: 36, right: 16, top: 28, bottom: 28 },
-    xAxis: { type: 'category', data: metrics.value.daily_trend_7d.map((item) => item.date.slice(5)) },
-    yAxis: { type: 'value' },
-    series: [{ type: 'line', smooth: true, areaStyle: { opacity: 0.18 }, data: metrics.value.daily_trend_7d.map((item) => item.count) }],
+    color: ['#00c48c'],
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    grid: { left: 44, right: 16, top: 28, bottom: 28 },
+    xAxis: { type: 'category', data: metrics.value.daily_trend_7d.map((item) => item.date.slice(5)), axisLabel: { color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
+    series: [{ type: 'line', smooth: true, areaStyle: { opacity: 0.14, color: '#00c48c' }, data: metrics.value.daily_trend_7d.map((item) => item.count) }],
   })
 }
 function renderUserTrendChart() {
@@ -198,11 +211,11 @@ function renderUserTrendChart() {
   if (!chart || !metrics.value) return
   const users = Array.from(new Set(metrics.value.user_detection_trend_7d.flatMap((item) => Object.keys(item.users))))
   chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { top: 0, type: 'scroll' },
-    grid: { left: 36, right: 16, top: 48, bottom: 28 },
-    xAxis: { type: 'category', data: metrics.value.user_detection_trend_7d.map((item) => item.date.slice(5)) },
-    yAxis: { type: 'value' },
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    legend: { top: 0, type: 'scroll', textStyle: { color: '#95a1b2' } },
+    grid: { left: 44, right: 16, top: 48, bottom: 28 },
+    xAxis: { type: 'category', data: metrics.value.user_detection_trend_7d.map((item) => item.date.slice(5)), axisLabel: { color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
     series: users.map((name) => ({ name, type: 'line', smooth: true, data: metrics.value?.user_detection_trend_7d.map((item) => item.users[name] || 0) || [] })),
   })
 }
@@ -210,47 +223,47 @@ function renderClassChart() {
   const chart = makeChart(classEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#d39a2d'],
-    tooltip: { trigger: 'axis' },
-    grid: { left: 36, right: 16, top: 28, bottom: 48 },
-    xAxis: { type: 'category', data: metrics.value.class_distribution.map((item) => item.class_zh || item.class), axisLabel: { rotate: 25 } },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', barWidth: 28, data: metrics.value.class_distribution.map((item) => item.count) }],
+    color: ['#f5a623'],
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    grid: { left: 44, right: 16, top: 28, bottom: 48 },
+    xAxis: { type: 'category', data: metrics.value.class_distribution.map((item) => item.class_zh || item.class), axisLabel: { rotate: 25, color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
+    series: [{ type: 'bar', barWidth: 24, data: metrics.value.class_distribution.map((item) => item.count) }],
   })
 }
 function renderModelChart() {
   const chart = makeChart(modelEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#2f7d67'],
-    tooltip: { trigger: 'axis' },
-    grid: { left: 92, right: 18, top: 24, bottom: 24 },
-    xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: metrics.value.model_call_ranking.map((item) => item.model || '未命名') },
-    series: [{ type: 'bar', data: metrics.value.model_call_ranking.map((item) => item.count) }],
+    color: ['#00c48c'],
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    grid: { left: 100, right: 18, top: 24, bottom: 24 },
+    xAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
+    yAxis: { type: 'category', data: metrics.value.model_call_ranking.map((item) => item.model || '未命名'), axisLabel: { color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    series: [{ type: 'bar', barWidth: 20, data: metrics.value.model_call_ranking.map((item) => item.count) }],
   })
 }
 function renderAiChart() {
   const chart = makeChart(aiEl.value)
   if (!chart || !metrics.value) return
   chart.setOption({
-    color: ['#b88427'],
-    tooltip: { trigger: 'axis' },
-    grid: { left: 36, right: 16, top: 28, bottom: 28 },
-    xAxis: { type: 'category', data: metrics.value.ai_call_trend_7d.map((item) => item.date.slice(5)) },
-    yAxis: { type: 'value' },
-    series: [{ type: 'line', smooth: true, areaStyle: { opacity: 0.16 }, data: metrics.value.ai_call_trend_7d.map((item) => item.count) }],
+    color: ['#2196f3'],
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    grid: { left: 44, right: 16, top: 28, bottom: 28 },
+    xAxis: { type: 'category', data: metrics.value.ai_call_trend_7d.map((item) => item.date.slice(5)), axisLabel: { color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
+    series: [{ type: 'line', smooth: true, areaStyle: { opacity: 0.12, color: '#2196f3' }, data: metrics.value.ai_call_trend_7d.map((item) => item.count) }],
   })
 }
 function renderResourceChart() {
   const chart = makeChart(resourceEl.value)
   if (!chart) return
   chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    grid: { left: 36, right: 14, top: 44, bottom: 26 },
-    xAxis: { type: 'category', data: resourceSamples.value.map((item) => item.time) },
-    yAxis: { type: 'value', max: 100 },
+    tooltip: { trigger: 'axis', ...darkTooltip() },
+    legend: { top: 0, textStyle: { color: '#95a1b2' } },
+    grid: { left: 40, right: 14, top: 44, bottom: 26 },
+    xAxis: { type: 'category', data: resourceSamples.value.map((item) => item.time), axisLabel: { color: '#95a1b2' }, axisLine: { lineStyle: { color: '#212a38' } } },
+    yAxis: { type: 'value', max: 100, splitLine: { lineStyle: { color: '#1a2230' } }, axisLabel: { color: '#95a1b2' } },
     series: [
       { name: 'CPU', type: 'line', smooth: true, data: resourceSamples.value.map((item) => item.cpu) },
       { name: '内存', type: 'line', smooth: true, data: resourceSamples.value.map((item) => item.memory) },

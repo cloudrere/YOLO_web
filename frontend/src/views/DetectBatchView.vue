@@ -2,7 +2,7 @@
   <AppLayout>
     <section class="detection-status-strip panel-card">
       <div>
-        <span class="eyebrow dark">批量图片检测</span>
+        <span class="eyebrow">批量图片检测</span>
         <h2>多图队列检测</h2>
         <p>批量任务逐张提交，支持暂停、继续、结束，页面状态独立保存。</p>
       </div>
@@ -71,7 +71,7 @@
           <div class="batch-card-body">
             <div class="toolbar">
               <strong>{{ item.file_name }}</strong>
-              <el-tag :type="item.status === 'done' ? 'success' : 'danger'">{{ item.status === 'done' ? '已完成' : item.status }}</el-tag>
+              <el-tag :type="item.status === 'done' ? 'success' : 'danger'" size="small">{{ item.status === 'done' ? '已完成' : item.status }}</el-tag>
             </div>
             <DetectionResultTable :results="item.results" />
           </div>
@@ -102,23 +102,13 @@ const targetCount = computed(() => result.value?.items.reduce((sum, item) => sum
 const statusText = computed(() => (loading.value ? (paused.value ? '已暂停' : '检测中') : result.value ? '已完成' : '待上传'))
 const previewTitle = computed(() => (result.value ? `${result.value.items.length} 张图片` : loading.value ? '批量处理中' : '等待批量任务'))
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function collectBatch(_: UploadFile, uploadFiles: UploadFile[]) {
-  files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[]
-}
-function collectBatchRemove(_: UploadFile, uploadFiles: UploadFile[]) {
-  files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[]
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function collectBatch(_: UploadFile, uploadFiles: UploadFile[]) { files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[] }
+function collectBatchRemove(_: UploadFile, uploadFiles: UploadFile[]) { files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[] }
 async function runBatch() {
   if (!files.value.length) return
-  loading.value = true
-  paused.value = false
-  ended.value = false
-  errorText.value = ''
-  result.value = { items: [], parameters: { ...params } }
-  progress.value = 0
+  loading.value = true; paused.value = false; ended.value = false; errorText.value = ''
+  result.value = { items: [], parameters: { ...params } }; progress.value = 0
   try {
     for (let index = 0; index < files.value.length; index += 1) {
       if (ended.value) break
@@ -135,34 +125,16 @@ async function runBatch() {
     if (!ended.value && !errorText.value) ElMessage.success('批量检测已完成')
   }
 }
-function togglePause() {
-  paused.value = !paused.value
-  ElMessage.info(paused.value ? '批量检测已暂停' : '批量检测已继续')
-}
+function togglePause() { paused.value = !paused.value; ElMessage.info(paused.value ? '批量检测已暂停' : '批量检测已继续') }
 async function endBatch() {
-  try {
-    await ElMessageBox.confirm('确认结束当前批量检测任务吗？未处理的图片将不再继续检测。', '结束确认', { type: 'warning', confirmButtonText: '确认结束', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  ended.value = true
-  paused.value = false
-  loading.value = false
+  try { await ElMessageBox.confirm('确认结束当前批量检测任务吗？', '结束确认', { type: 'warning', confirmButtonText: '确认结束', cancelButtonText: '取消' }) } catch { return }
+  ended.value = true; paused.value = false; loading.value = false
   ElMessage.warning('批量检测已结束')
 }
 async function clearResults() {
-  try {
-    await ElMessageBox.confirm('确认清除当前批量检测结果吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  result.value = null
-  progress.value = 0
-  ended.value = true
-  errorText.value = ''
+  try { await ElMessageBox.confirm('确认清除当前批量检测结果吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' }) } catch { return }
+  result.value = null; progress.value = 0; ended.value = true; errorText.value = ''
   ElMessage.success('批量检测结果已清除')
 }
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
+function wait(ms: number) { return new Promise((resolve) => window.setTimeout(resolve, ms)) }
 </script>

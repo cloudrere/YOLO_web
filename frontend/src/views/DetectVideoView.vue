@@ -2,12 +2,12 @@
   <AppLayout>
     <section class="detection-status-strip panel-card">
       <div>
-        <span class="eyebrow dark">视频文件检测</span>
+        <span class="eyebrow">视频审核台</span>
         <h2>异步视频抽帧检测</h2>
         <p>上传视频创建后台任务，支持暂停、继续和结束，检测结果按任务独立轮询。</p>
       </div>
       <div class="status-pills">
-        <el-tag :type="task ? 'success' : 'info'">{{ task ? `任务 ${task.id}` : '未创建任务' }}</el-tag>
+        <el-tag :type="task ? 'success' : 'info'">{{ task ? `任务 #${task.id}` : '未创建任务' }}</el-tag>
         <el-tag>{{ params.confidence.toFixed(2) }} / {{ params.iou.toFixed(2) }}</el-tag>
       </div>
     </section>
@@ -23,11 +23,11 @@
           <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="running" />
         </div>
         <div class="mode-config">
-          <h3>上传视频</h3>
+          <h3>上传视频文件</h3>
           <el-upload drag :auto-upload="false" :limit="1" :on-change="selectVideo" :on-remove="removeVideo" :disabled="running">
-            <p>选择视频文件后创建检测任务</p>
+            <p>选择视频文件后创建异步检测任务</p>
           </el-upload>
-          <el-progress v-if="task" :percentage="Math.round(task.progress)" :stroke-width="12" />
+          <el-progress v-if="task" :percentage="Math.round(task.progress)" :stroke-width="12" style="margin-top: 14px;" />
           <div class="split-actions three-actions">
             <el-button type="primary" size="large" :disabled="!videoFile || loading || running" :loading="loading" @click="runVideo">开始</el-button>
             <el-button size="large" :disabled="!canPause" @click="togglePause">{{ task?.status === 'paused' ? '继续' : '暂停' }}</el-button>
@@ -48,7 +48,7 @@
         </div>
         <div class="preview-metrics">
           <div><strong>{{ summary?.frames_sampled ?? 0 }}</strong><span>采样帧</span></div>
-          <div><strong>{{ summary?.results_count ?? 0 }}</strong><span>目标数</span></div>
+          <div><strong>{{ summary?.frames_processed ?? 0 }}</strong><span>已处理帧</span></div>
           <div><strong>{{ task ? `${Math.round(task.progress)}%` : '0%' }}</strong><span>进度</span></div>
         </div>
       </main>
@@ -56,7 +56,7 @@
 
     <section class="detection-inspector panel-card">
       <div class="inspector-header">
-        <div><span class="eyebrow dark">任务详情</span><h3>视频任务状态</h3></div>
+        <div><span class="eyebrow dark">任务详情</span><h3>视频任务状态与进度</h3></div>
         <el-button :disabled="!task" @click="clearResults">清除结果</el-button>
       </div>
       <div v-if="task" class="task-inspector">
@@ -98,22 +98,14 @@ const canPause = computed(() => Boolean(task.value && ['running', 'paused'].incl
 const canEnd = computed(() => Boolean(task.value && ['pending', 'running', 'paused'].includes(task.value.status)))
 const summary = computed<VideoSummary | null>(() => {
   if (!task.value?.result_json) return null
-  try {
-    return JSON.parse(task.value.result_json) as VideoSummary
-  } catch {
-    return null
-  }
+  try { return JSON.parse(task.value.result_json) as VideoSummary } catch { return null }
 })
 
 function statusText(status: string) {
   return { pending: '等待中', running: '处理中', paused: '已暂停', cancelled: '已结束', done: '已完成', failed: '失败' }[status] || status
 }
-function selectVideo(file: UploadFile) {
-  videoFile.value = file.raw || null
-}
-function removeVideo() {
-  videoFile.value = null
-}
+function selectVideo(file: UploadFile) { videoFile.value = file.raw || null }
+function removeVideo() { videoFile.value = null }
 async function runVideo() {
   if (!videoFile.value) return
   loading.value = true
@@ -131,9 +123,7 @@ async function runVideo() {
   } catch (error: any) {
     errorText.value = error?.message || '视频检测任务创建失败'
     ElMessage.error(errorText.value)
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 async function togglePause() {
   if (!task.value) return
@@ -144,9 +134,7 @@ async function endVideo() {
   if (!task.value) return
   try {
     await ElMessageBox.confirm('确认结束当前视频检测任务吗？', '结束确认', { type: 'warning', confirmButtonText: '确认结束', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
+  } catch { return }
   task.value = await controlTask(task.value.id, 'cancel')
   window.clearInterval(timer)
   ElMessage.warning('视频检测已结束')
@@ -154,12 +142,8 @@ async function endVideo() {
 async function clearResults() {
   try {
     await ElMessageBox.confirm('确认清除当前视频任务和结果展示吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  task.value = null
-  errorText.value = ''
-  window.clearInterval(timer)
+  } catch { return }
+  task.value = null; errorText.value = ''; window.clearInterval(timer)
   ElMessage.success('视频任务结果已清除')
 }
 onBeforeUnmount(() => window.clearInterval(timer))

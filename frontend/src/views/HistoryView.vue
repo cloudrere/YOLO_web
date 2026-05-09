@@ -3,7 +3,7 @@
     <el-card shadow="never" class="panel-card">
       <template #header>
         <div class="toolbar">
-          <span>检测历史</span>
+          <span>事件档案库</span>
           <div class="form-actions">
             <el-button type="danger" :disabled="!selectedRows.length" @click="removeSelected">批量删除</el-button>
             <el-button @click="exportRows">导出 Excel</el-button>
@@ -50,21 +50,21 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="source_type" label="来源" width="120" />
-          <el-table-column prop="username" label="用户" width="120" />
+          <el-table-column prop="source_type" label="来源" width="110" />
+          <el-table-column prop="username" label="用户" width="110" />
           <el-table-column prop="file_name" label="文件名" min-width="180" />
           <el-table-column label="类别" min-width="180">
             <template #default="{ row }">
-              <el-tag v-for="item in row.classes" :key="`${item.class}-${item.class_zh}`" class="tag" type="success">
+              <el-tag v-for="item in row.classes" :key="`${item.class}-${item.class_zh}`" class="tag" type="success" size="small">
                 {{ item.class_zh || item.class }} {{ item.count }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column prop="result_count" label="目标数" width="100" />
-          <el-table-column prop="duration_ms" label="耗时(ms)" width="130" />
-          <el-table-column prop="created_at_text" label="检测时间" width="190" />
-          <el-table-column label="操作" width="120">
+          <el-table-column prop="result_count" label="目标数" width="90" />
+          <el-table-column prop="duration_ms" label="耗时(ms)" width="120" />
+          <el-table-column prop="created_at_text" label="检测时间" width="180" />
+          <el-table-column label="操作" width="100">
             <template #default="{ row }">
               <el-button type="danger" size="small" @click.stop="remove(row.id)">删除</el-button>
             </template>
@@ -73,7 +73,9 @@
       </div>
       <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" @current-change="load" />
     </el-card>
-    <el-drawer v-model="drawer" title="检测详情" size="64%">
+
+    <!-- 事件详情抽屉 -->
+    <el-drawer v-model="drawer" title="事件详情" size="64%">
       <div v-if="detail" class="detail-meta-grid">
         <div><span>用户</span><strong>{{ detail.username || detail.user_id || '暂无' }}</strong></div>
         <div><span>模型</span><strong>{{ detail.model_name || '暂无' }}</strong></div>
@@ -117,67 +119,38 @@ const pageSize = 20
 const filters = reactive({ source_type: '', class_name: '', class_name_zh: '', username: '' })
 const selectedRows = ref<HistoryItem[]>([])
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function videoThumbUrl(row: HistoryItem) {
-  return row.video_thumb_url || row.result_url || row.original_url
-}
-function filterParams() {
-  return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== ''))
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function videoThumbUrl(row: HistoryItem) { return row.video_thumb_url || row.result_url || row.original_url }
+function filterParams() { return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== '')) }
 async function load() {
   const data = await listHistory(filterParams())
-  rows.value = data.items
-  total.value = data.total
-  selectedRows.value = []
+  rows.value = data.items; total.value = data.total; selectedRows.value = []
 }
-function handleSelectionChange(selection: HistoryItem[]) {
-  selectedRows.value = selection
-}
-function formatParameters(detail: HistoryDetail | null) {
-  if (!detail) return '-'
-  return `置信度 ${detail.confidence_threshold} / IoU 阈值 ${detail.iou_threshold}`
+function handleSelectionChange(selection: HistoryItem[]) { selectedRows.value = selection }
+function formatParameters(d: HistoryDetail | null) {
+  if (!d) return '-'
+  return `置信度 ${d.confidence_threshold} / IoU 阈值 ${d.iou_threshold}`
 }
 async function openDetail(row: HistoryItem) {
   localVideoFailed.value = false
   detail.value = await getHistory(row.id)
   drawer.value = true
 }
-function handleVideoError() {
-  localVideoFailed.value = true
-  ElMessage.warning('本地视频暂不可直接播放，已切换为检测帧流')
-}
+function handleVideoError() { localVideoFailed.value = true; ElMessage.warning('本地视频暂不可直接播放，已切换为检测帧流') }
 async function remove(id: number) {
-  try {
-    await ElMessageBox.confirm('确认删除这条检测历史吗？删除后不可在列表中恢复。', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  await deleteHistory(id)
-  ElMessage.success('检测历史已删除')
-  await load()
+  try { await ElMessageBox.confirm('确认删除这条检测历史吗？删除后不可在列表中恢复。', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }) } catch { return }
+  await deleteHistory(id); ElMessage.success('检测历史已删除'); await load()
 }
 async function removeSelected() {
   if (!selectedRows.value.length) return
-  try {
-    await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条检测历史吗？删除后不可在列表中恢复。`, '批量删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  await deleteHistoryBatch(selectedRows.value.map((row) => row.id))
-  ElMessage.success('检测历史已批量删除')
-  await load()
+  try { await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条检测历史吗？`, '批量删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }) } catch { return }
+  await deleteHistoryBatch(selectedRows.value.map((r) => r.id)); ElMessage.success('检测历史已批量删除'); await load()
 }
 async function exportRows() {
   const response = await exportHistory(filterParams())
   const url = URL.createObjectURL(response.data)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '检测历史.xlsx'
-  link.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('检测历史已导出')
+  const link = document.createElement('a'); link.href = url; link.download = '检测历史.xlsx'; link.click()
+  URL.revokeObjectURL(url); ElMessage.success('检测历史已导出')
 }
 onMounted(load)
 </script>

@@ -2,7 +2,7 @@
   <AppLayout>
     <section class="detection-status-strip panel-card">
       <div>
-        <span class="eyebrow dark">单图检测</span>
+        <span class="eyebrow">单图检测</span>
         <h2>图片检测与标注预览</h2>
         <p>上传一张图片，按当前参数生成检测图和目标列表，结果可选择保存到历史记录。</p>
       </div>
@@ -37,7 +37,7 @@
 
       <main class="detection-preview-stage panel-card">
         <div class="preview-header">
-          <div><span>原图 / 检测图</span><strong>{{ result ? '检测完成' : loading ? '检测中' : '等待图片' }}</strong></div>
+          <div><span>原图 / 检测图</span><strong>{{ result ? '检测完成' : loading ? '检测中...' : '等待图片' }}</strong></div>
           <el-tag :type="loading ? 'warning' : result ? 'success' : 'info'">{{ loading ? '检测中' : result ? '已完成' : '待上传' }}</el-tag>
         </div>
         <div class="preview-canvas">
@@ -89,37 +89,23 @@ const topClass = computed(() => {
   return Object.values(counts).sort((a, b) => b.count - a.count)[0].label
 })
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function selectImage(file: UploadFile) {
-  imageFile.value = file.raw || null
-}
-function removeImage() {
-  imageFile.value = null
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function selectImage(file: UploadFile) { imageFile.value = file.raw || null }
+function removeImage() { imageFile.value = null }
 async function runImage() {
   if (!imageFile.value) return
-  loading.value = true
-  errorText.value = ''
+  loading.value = true; errorText.value = ''
   try {
     result.value = await detectImage(imageFile.value, { ...params })
     ElMessage.success('单图检测已完成')
   } catch (error: any) {
     errorText.value = error?.message || '单图检测失败'
     ElMessage.error(errorText.value)
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 async function clearResults() {
-  try {
-    await ElMessageBox.confirm('确认清除当前单图检测结果和预览图吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  result.value = null
-  errorText.value = ''
+  try { await ElMessageBox.confirm('确认清除当前单图检测结果和预览图吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' }) } catch { return }
+  result.value = null; errorText.value = ''
   ElMessage.success('检测结果已清除')
 }
 </script>
