@@ -1,54 +1,79 @@
 <template>
   <AppLayout>
-    <section class="grid">
-      <el-card shadow="never" class="panel-card">
-        <template #header>创建用户</template>
-        <el-form :model="form" label-width="110px">
-          <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-          <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
-          <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
-          <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
+    <section class="workstation-hero">
+      <div>
+        <h2>用户管理</h2>
+        <p>管理系统用户账号、角色权限、启用状态和密码重置，需管理员权限操作。</p>
+      </div>
+      <el-button size="small" @click="load">刷新</el-button>
+    </section>
+
+    <section class="grid two" style="margin-bottom:var(--gap);">
+      <!-- 创建用户 -->
+      <el-card shadow="never">
+        <template #header><span style="font-weight:700;">创建用户</span></template>
+        <el-form :model="form" label-position="top">
+          <el-form-item label="用户名" required><el-input v-model="form.username" placeholder="登录用户名" /></el-form-item>
+          <el-form-item label="密码" required><el-input v-model="form.password" type="password" placeholder="初始密码" show-password /></el-form-item>
+          <div style="display:flex;gap:24px;">
+            <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
+            <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
+          </div>
           <el-form-item label="角色">
-            <el-select v-model="form.role_ids" multiple style="width: 100%">
+            <el-select v-model="form.role_ids" multiple placeholder="选择角色" style="width:100%;">
               <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
             </el-select>
           </el-form-item>
-          <el-button type="primary" @click="create">创建用户</el-button>
+          <el-button type="primary" style="width:100%;" @click="create">创建用户</el-button>
         </el-form>
       </el-card>
+
+      <!-- 角色说明 -->
+      <el-card shadow="never">
+        <template #header><span style="font-weight:700;">角色说明</span></template>
+        <div style="display:grid;gap:8px;">
+          <div v-for="role in roles" :key="role.id" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;background:var(--color-bg);">
+            <el-tag size="small">{{ roleLabel(role) }}</el-tag>
+            <span style="font-size:13px;color:var(--color-muted);">{{ role.description || role.name }}</span>
+          </div>
+        </div>
+        <el-empty v-if="!roles.length" description="暂无角色数据" />
+      </el-card>
     </section>
-    <el-card shadow="never" class="panel-card">
+
+    <!-- 用户列表 -->
+    <el-card shadow="never">
       <template #header>
-        <div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;">用户列表</span>
+          <div style="display:flex;gap:8px;">
+            <el-input v-model="keyword" clearable placeholder="搜索用户名" style="width:200px;" @keyup.enter="load" />
+            <el-button type="primary" @click="load">查询</el-button>
+          </div>
+        </div>
       </template>
-      <el-form :inline="true" class="filter-bar">
-        <el-form-item label="用户查询">
-          <el-input v-model="keyword" clearable placeholder="输入用户名关键词" @keyup.enter="load" />
-        </el-form-item>
-        <el-button type="primary" @click="load">查询</el-button>
-      </el-form>
-      <div class="table-scroll user-table-shell">
-        <el-table :data="users">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" />
-          <el-table-column label="启用" width="100">
-            <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template>
+      <div class="table-scroll">
+        <el-table :data="users" size="small">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column prop="username" label="用户名" min-width="130" />
+          <el-table-column label="启用" width="90">
+            <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'" size="small">{{ row.is_active ? '启用' : '停用' }}</el-tag></template>
           </el-table-column>
-          <el-table-column label="超管" width="100">
-            <template #default="{ row }"><el-tag :type="row.is_superuser ? 'danger' : 'info'">{{ row.is_superuser ? '是' : '否' }}</el-tag></template>
+          <el-table-column label="超管" width="90">
+            <template #default="{ row }"><el-tag :type="row.is_superuser ? 'danger' : 'info'" size="small">{{ row.is_superuser ? '是' : '否' }}</el-tag></template>
           </el-table-column>
           <el-table-column label="角色" min-width="160">
             <template #default="{ row }">{{ row.roles.map((role: Role) => roleLabel(role)).join(', ') }}</template>
           </el-table-column>
-          <el-table-column label="创建时间" width="190">
+          <el-table-column label="创建时间" width="180">
             <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
           </el-table-column>
-          <el-table-column label="最后登录" width="190">
+          <el-table-column label="最后登录" width="180">
             <template #default="{ row }">{{ formatTime(row.last_login_at) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="260">
+          <el-table-column label="操作" width="260" fixed="right">
             <template #default="{ row }">
-              <div class="form-actions table-actions wrap-actions">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <el-button size="small" :type="row.is_active ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.is_active ? '停用' : '启用' }}</el-button>
                 <el-button size="small" @click="openResetPassword(row)">重置密码</el-button>
                 <el-button type="danger" size="small" @click="remove(row.id)">删除</el-button>
@@ -58,6 +83,8 @@
         </el-table>
       </div>
     </el-card>
+
+    <!-- 重置密码对话框 -->
     <el-dialog v-model="resetDialog" title="重置密码" width="420px">
       <el-form label-position="top">
         <el-form-item label="用户名"><el-input :model-value="selectedUser?.username || ''" disabled /></el-form-item>

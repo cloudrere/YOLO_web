@@ -1,68 +1,52 @@
 <template>
   <AppLayout>
-    <section class="maintenance-hero panel-card">
+    <section class="workstation-hero">
       <div>
-        <span class="eyebrow dark">System Maintenance</span>
-        <h2>系统维护</h2>
-        <p>集中检查 GPU、模型、数据库和文件系统状态，并执行高风险清理操作。</p>
+        <h2>运行环境体检</h2>
+        <p>检查 GPU 算力、模型完整性、数据库连接与文件系统状况，评估系统是否处于生产可用状态。</p>
       </div>
-      <div class="form-actions">
-        <el-button :loading="loading" @click="loadStatus">刷新状态</el-button>
-      </div>
+      <el-button :loading="loading" @click="loadStatus">刷新体检</el-button>
     </section>
 
-    <section class="grid two maintenance-status-grid">
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>GPU 状态</template>
-        <div class="status-line"><span>CUDA</span><el-tag :type="status?.gpu.cuda_available ? 'success' : 'danger'">{{ status?.gpu.cuda_available ? '可用' : '不可用' }}</el-tag></div>
-        <div class="status-line"><span>torch</span><strong>{{ status?.gpu.torch_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>CUDA 运行时</span><strong>{{ status?.gpu.torch_cuda_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>GPU 名称</span><strong>{{ status?.gpu.gpu_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>显存</span><strong>{{ formatBytes(status?.gpu.memory_total) }}</strong></div>
-        <div class="diagnostic-list">
-          <div v-for="item in status?.gpu.diagnostics || []" :key="`${item.name}-${item.message}`">
-            <el-tag :type="tagType(item.status)">{{ item.name }}</el-tag>
-            <span>{{ item.message }}</span>
-          </div>
+    <!-- 四卡体检面板 -->
+    <SystemHealthCard :status="status" style="margin-bottom:var(--gap);" />
+
+    <!-- GPU 诊断详情 -->
+    <el-card v-if="status?.gpu.diagnostics?.length" shadow="never" style="margin-bottom:var(--gap);">
+      <template #header><span style="font-weight:700;">GPU 诊断详情</span></template>
+      <div style="display:grid;gap:6px;">
+        <div v-for="item in status.gpu.diagnostics" :key="`${item.name}-${item.message}`" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--color-bg);">
+          <el-tag :type="tagType(item.status)" size="small">{{ item.name }}</el-tag>
+          <span style="font-size:13px;">{{ item.message }}</span>
         </div>
-      </el-card>
+      </div>
+    </el-card>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>模型状态</template>
-        <div class="status-line"><span>当前激活模型</span><strong>{{ status?.model.active_model_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>文件完整性</span><el-tag :type="status?.model.active_model_exists ? 'success' : 'danger'">{{ status?.model.active_model_exists ? '文件存在' : '文件缺失' }}</el-tag></div>
-        <div class="status-line"><span>模型数量</span><strong>{{ status?.model.total_models ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.model.active_model_path || '暂无模型路径' }}</div>
-      </el-card>
-
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>数据库状态</template>
-        <div class="status-line"><span>连接状态</span><el-tag :type="status?.database.connected ? 'success' : 'danger'">{{ status?.database.connected ? '已连接' : '异常' }}</el-tag></div>
-        <div class="status-line"><span>表完整性</span><el-tag :type="status?.database.tables_ok ? 'success' : 'danger'">{{ status?.database.tables_ok ? '完整' : '缺失' }}</el-tag></div>
-        <div class="status-line"><span>表数量</span><strong>{{ status?.database.table_count ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.database.missing_tables?.length ? `缺失表：${status.database.missing_tables.join(', ')}` : '关键表结构正常' }}</div>
-      </el-card>
-
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>文件系统</template>
-        <div class="status-line"><span>磁盘剩余</span><strong>{{ formatBytes(status?.filesystem.disk.free) }}</strong></div>
-        <div class="status-line"><span>磁盘总量</span><strong>{{ formatBytes(status?.filesystem.disk.total) }}</strong></div>
-        <div class="maintenance-paths">
-          <div v-for="(item, name) in status?.filesystem.paths || {}" :key="name">
-            <el-tag :type="item.exists && item.is_dir ? 'success' : 'danger'">{{ name }}</el-tag>
-            <span>{{ item.path }}</span>
-          </div>
+    <!-- 路径清单 -->
+    <el-card v-if="status?.filesystem?.paths" shadow="never" style="margin-bottom:var(--gap);">
+      <template #header><span style="font-weight:700;">存储路径清单</span></template>
+      <div style="display:grid;gap:6px;">
+        <div v-for="(item, name) in status.filesystem.paths" :key="name" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:var(--color-bg);">
+          <el-tag :type="item.exists && item.is_dir ? 'success' : 'danger'" size="small">{{ name }}</el-tag>
+          <code style="font-size:12px;color:var(--color-muted);">{{ item.path }}</code>
         </div>
-      </el-card>
-    </section>
+      </div>
+    </el-card>
 
-    <el-card shadow="never" class="panel-card maintenance-actions-panel">
-      <template #header>维护操作</template>
-      <div class="maintenance-actions-grid">
-        <div v-for="item in actions" :key="item.key" class="maintenance-action-card">
+    <!-- 危险操作区 -->
+    <el-card shadow="never" class="danger-zone">
+      <template #header>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:700;color:#991b1b;">维护操作（危险区）</span>
+          <el-tag type="danger" size="small">需二次确认</el-tag>
+        </div>
+      </template>
+      <p style="margin:0 0 16px;font-size:13px;color:var(--color-muted);">以下操作会不可逆地清除数据，请在执行前确认影响范围。</p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+        <div v-for="item in actions" :key="item.key" style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-radius:var(--radius-md);background:var(--color-bg);border:1px solid var(--color-border);">
           <div>
-            <h3>{{ item.title }}</h3>
-            <p>{{ item.desc }}</p>
+            <strong style="display:block;font-size:14px;">{{ item.title }}</strong>
+            <span style="display:block;font-size:12px;color:var(--color-muted);margin-top:4px;">{{ item.desc }}</span>
           </div>
           <el-button type="danger" :loading="runningAction === item.key" @click="runAction(item)">{{ item.button }}</el-button>
         </div>
@@ -75,6 +59,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import SystemHealthCard from '@/components/shared/SystemHealthCard.vue'
 import {
   clearMaintenanceHistory,
   clearMaintenanceLogs,
@@ -162,12 +147,5 @@ function tagType(status: string): 'success' | 'danger' | 'warning' | 'info' {
   if (status === 'error') return 'danger'
   if (status === 'warning') return 'warning'
   return 'info'
-}
-function formatBytes(value?: number) {
-  const size = Number(value || 0)
-  if (!size) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const index = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1)
-  return `${(size / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
 }
 </script>
