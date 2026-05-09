@@ -55,7 +55,7 @@
           </el-table-column>
           <el-table-column label="操作" width="260">
             <template #default="{ row }">
-              <div class="form-actions table-actions wrap-actions">
+              <div class="table-actions">
                 <el-button size="small" :type="row.is_active ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.is_active ? '停用' : '启用' }}</el-button>
                 <el-button size="small" @click="openResetPassword(row)">重置密码</el-button>
                 <el-button type="danger" size="small" @click="remove(row.id)">删除</el-button>

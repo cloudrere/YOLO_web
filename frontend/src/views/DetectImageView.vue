@@ -217,127 +217,9 @@ async function clearResults() {
 </script>
 
 <style scoped>
-/* ── Panel internals ── */
-.panel-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--panel-pad);
-}
-
-.panel-section {
-  margin-bottom: 20px;
-}
-.panel-section:last-child {
-  margin-bottom: 0;
-}
-
-.panel-title {
-  margin: 0 0 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-ink);
-  letter-spacing: -0.01em;
-}
-
-.param-row {
-  margin-bottom: 14px;
-}
-.param-row label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-muted);
-}
-.param-row.switch-row {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
-}
-
-.param-value {
-  font-family: var(--font-mono);
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 14px;
-  background: var(--color-primary-soft);
-  padding: 1px 8px;
-  border-radius: 4px;
-}
-
-/* ── Upload ── */
-.upload-area {
-  width: 100%;
-}
-.upload-placeholder {
-  padding: 8px 0;
-}
-.upload-placeholder .upload-icon {
-  display: block;
-  font-size: 32px;
-  color: var(--color-primary-light);
-  font-weight: 300;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.upload-placeholder p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-ink);
-}
-.upload-placeholder small {
-  color: var(--color-muted);
-  font-size: 11px;
-}
-
-/* ── Actions ── */
-.split-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-/* ── Canvas states ── */
+/* ── Canvas overrides ── */
 .detect-canvas {
-  position: relative;
-  display: grid;
-  place-items: center;
   min-height: 420px;
-  overflow: hidden;
-}
-.detect-canvas.has-image {
-  border-style: solid;
-  background: #0f172a;
-}
-
-.canvas-state {
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 40px 20px;
-  position: relative;
-  z-index: 2;
-}
-
-.canvas-state.scanning .scan-label {
-  color: var(--color-primary);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.canvas-state.empty h3 {
-  margin: 12px 0 4px;
-  font-size: 17px;
-  color: var(--color-ink);
-}
-.canvas-state.empty p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-muted);
 }
 
 /* ── Compare grid tweaks ── */
@@ -345,41 +227,7 @@ async function clearResults() {
   padding: 0;
   width: 100%;
 }
-.compare-grid figure {
-  margin: 0;
-  text-align: center;
-}
 .compare-grid img {
-  width: 100%;
   max-height: 380px;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-}
-
-/* ── Metric compact ── */
-.metric-card.compact {
-  padding: 14px;
-  text-align: center;
-}
-.metric-card.compact .metric-label {
-  font-size: 11px;
-}
-.metric-card.compact .metric-value {
-  font-size: 22px;
-  margin-top: 2px;
-}
-
-/* ── Eyebrow ── */
-.eyebrow {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-primary);
-  margin-bottom: 2px;
-}
-.eyebrow.dark {
-  color: var(--color-muted);
 }
 </style>

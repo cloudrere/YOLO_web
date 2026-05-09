@@ -122,7 +122,7 @@
           </el-table-column>
         </el-table>
       </div>
-      <div style="padding:16px 20px;display:flex;justify-content:flex-end;border-top:1px solid var(--color-border);">
+      <div class="pagination-footer">
         <el-pagination
           v-model:current-page="page"
           :total="total"

@@ -51,7 +51,9 @@
           </el-table>
         </TransitionGroup>
       </div>
-      <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" background @current-change="load" />
+      <div class="pagination-footer">
+        <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" background @current-change="load" />
+      </div>
     </el-card>
   </AppLayout>
 </template>

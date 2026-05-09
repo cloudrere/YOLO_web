@@ -1,8 +1,8 @@
 <template>
   <AppLayout>
-    <!-- Hero 横幅：连接状态 + 参数概览 -->
-    <div class="workstation-hero">
-      <div style="display:flex;align-items:center;gap:14px;">
+    <!-- Hero 横幅 -->
+    <section class="workstation-hero flex-between">
+      <div class="flex-wrap" style="gap:14px;">
         <span class="pulse-dot" :class="active ? 'running' : paused ? 'warning' : 'idle'" style="width:14px;height:14px;" :title="active ? '运行中' : paused ? '已暂停' : '未连接'" />
         <div>
           <span class="eyebrow dark">实时视频流检测</span>
@@ -14,43 +14,42 @@
         <el-tag :type="active ? 'success' : paused ? 'warning' : 'info'" size="large">{{ active ? '已连接' : paused ? '已暂停' : '未连接' }}</el-tag>
         <el-tag>{{ params.confidence.toFixed(2) }} / {{ params.iou.toFixed(2) }}</el-tag>
       </div>
-    </div>
+    </section>
 
     <!-- 三栏检测工作台 -->
     <section class="detection-workbench">
       <!-- 左栏：连接配置 -->
-      <aside class="panel-card" style="padding:20px;border-radius:var(--radius-md);background:var(--color-surface);border:1px solid var(--color-border);">
-        <h3 style="margin:0 0 12px;font-size:16px;color:var(--color-ink);">实时来源</h3>
+      <aside class="panel-card">
+        <h3 class="panel-title" style="font-size:16px;">实时来源</h3>
         <el-input
           v-model="source"
           size="large"
           placeholder="摄像头 0 或 RTSP/HTTP 地址"
           :disabled="active"
         />
-        <h3 style="margin:20px 0 8px;font-size:16px;color:var(--color-ink);">检测参数</h3>
-        <label style="display:flex;justify-content:space-between;font-size:13px;color:var(--color-muted);margin-bottom:4px;">
-          <span>置信度阈值</span><strong>{{ params.confidence.toFixed(2) }}</strong>
-        </label>
-        <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="active" />
-        <label style="display:flex;justify-content:space-between;font-size:13px;color:var(--color-muted);margin-bottom:4px;">
-          <span>IoU 阈值</span><strong>{{ params.iou.toFixed(2) }}</strong>
-        </label>
-        <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="active" />
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:20px;">
-          <el-button type="primary" size="large" :disabled="active || !source.trim()" @click="startRealtime" style="grid-column:span 1;">开始</el-button>
+        <h3 class="panel-title" style="font-size:16px;margin-top:20px;">检测参数</h3>
+        <div class="param-row">
+          <label>置信度阈值 <span class="param-value">{{ params.confidence.toFixed(2) }}</span></label>
+          <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="active" />
+        </div>
+        <div class="param-row">
+          <label>IoU 阈值 <span class="param-value">{{ params.iou.toFixed(2) }}</span></label>
+          <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="active" />
+        </div>
+        <div class="split-actions three-col">
+          <el-button type="primary" size="large" :disabled="active || !source.trim()" @click="startRealtime">开始</el-button>
           <el-button size="large" :disabled="!active && !paused" @click="togglePause">{{ paused ? '继续' : '暂停' }}</el-button>
           <el-button size="large" type="danger" :disabled="!active && !paused" @click="stopRealtime">结束</el-button>
         </div>
-        <p v-if="errorText" class="error-text" style="margin:12px 0 0;">{{ errorText }}</p>
+        <p v-if="errorText" class="error-text" style="margin-top:12px;">{{ errorText }}</p>
       </aside>
 
       <!-- 中栏：实时视口 -->
-      <main class="realtime-viewport" style="display:flex;flex-direction:column;gap:var(--gap);">
-        <div class="panel-card" style="padding:16px 20px;border-radius:var(--radius-md);background:var(--color-surface);border:1px solid var(--color-border);">
+      <main class="realtime-viewport">
+        <div class="panel-card" style="padding:16px 20px;">
           <div class="flex-between">
             <div>
-              <span style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">实时画面</span>
-              <strong style="margin-left:10px;font-size:16px;color:var(--color-ink);">{{ previewTitle }}</strong>
+              <span class="metric-label">{{ previewTitle }}</span>
             </div>
             <el-tag :type="active ? 'success' : paused ? 'warning' : 'info'" size="large">{{ statusText }}</el-tag>
           </div>
@@ -91,9 +90,9 @@
       </main>
 
       <!-- 右栏：实时状态 + 提示 -->
-      <div style="display:flex;flex-direction:column;gap:var(--gap);">
-        <div class="panel-card" style="padding:20px;border-radius:var(--radius-md);background:var(--color-surface);border:1px solid var(--color-border);">
-          <h3 style="margin:0 0 16px;font-size:16px;color:var(--color-ink);">连接详情</h3>
+      <div class="realtime-side">
+        <div class="panel-card">
+          <h3 class="panel-title" style="font-size:16px;margin-bottom:16px;">连接详情</h3>
           <div class="health-status-line">
             <span>连接状态</span>
             <strong :style="{ color: active ? 'var(--status-success)' : paused ? 'var(--status-warning)' : 'var(--color-soft)' }">{{ statusText }}</strong>
@@ -114,9 +113,9 @@
             <span>IoU 阈值</span><strong>{{ params.iou.toFixed(2) }}</strong>
           </div>
         </div>
-        <div style="padding:18px 20px;border-radius:var(--radius-md);background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.12);">
-          <p style="margin:0;font-size:13px;color:var(--color-muted);line-height:1.7;">
-            <strong style="color:var(--color-primary);display:block;margin-bottom:6px;">操作说明</strong>
+        <div class="realtime-tip">
+          <p>
+            <strong>操作说明</strong>
             暂停会断开当前 MJPEG 连接；<br />继续时按当前参数重新连接；<br />结束检测后需重新点击开始。
           </p>
         </div>
