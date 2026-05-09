@@ -1,23 +1,24 @@
 <template>
   <AppLayout>
-    <section class="model-command-center panel-card">
-      <div class="model-command-main">
-        <span class="eyebrow dark">模型控制室</span>
+    <div class="bi-model-header">
+      <div>
         <h2>{{ active?.active_model?.display_name || active?.active_model?.name || '尚未激活模型' }}</h2>
         <p>{{ active?.model_path || '请先上传或登记模型，然后选择推理设备并激活。' }}</p>
       </div>
-      <div class="model-command-stats">
-        <div><span>当前选择</span><strong>{{ deviceLabel(active?.requested_device || 'auto') }}</strong></div>
-        <div><span>实际运行</span><strong>{{ active?.device || '-' }}</strong></div>
-        <div><span>初始化</span><strong>{{ warmupText }}</strong></div>
-        <div><span>CUDA</span><strong>{{ active?.cuda_available ? active.cuda_name || '可用' : '不可用' }}</strong></div>
-      </div>
-    </section>
+      <el-tag :type="active?.active_model ? 'success' : 'warning'" size="small">{{ active?.active_model ? '已激活' : '未激活' }}</el-tag>
+    </div>
 
-    <section class="model-control-layout">
-      <el-card shadow="never" class="panel-card device-control-panel">
-        <template #header>推理设备切换</template>
-        <div class="device-switcher">
+    <div class="bi-model-stats">
+      <div><span>当前选择</span><strong>{{ deviceLabel(active?.requested_device || 'auto') }}</strong></div>
+      <div><span>实际运行</span><strong>{{ active?.device || '-' }}</strong></div>
+      <div><span>初始化</span><strong>{{ warmupText }}</strong></div>
+      <div><span>CUDA</span><strong>{{ active?.cuda_available ? active.cuda_name || '可用' : '不可用' }}</strong></div>
+    </div>
+
+    <div class="bi-model-grid">
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">推理设备切换</span></template>
+        <div class="bi-device-switcher">
           <el-button
             v-for="option in displayDeviceOptions"
             :key="option.value"
@@ -28,42 +29,43 @@
             {{ option.label }}
           </el-button>
         </div>
-        <div class="device-detail-card" :class="selectedDevice.startsWith('cuda') ? 'gpu' : selectedDevice === 'cpu' ? 'cpu' : 'auto'">
+        <div class="bi-device-info-card" :class="selectedDevice.startsWith('cuda') ? 'gpu' : selectedDevice === 'cpu' ? 'cpu' : 'auto'">
           <strong>{{ deviceLabel(selectedDevice) }}</strong>
           <span>{{ selectedDeviceDescription }}</span>
           <small v-if="selectedDeviceDetail">{{ selectedDeviceDetail }}</small>
         </div>
-        <el-button class="full" type="primary" :loading="switchingDevice" :disabled="!active?.active_model || !canManageModel" @click="switchDevice">
+        <el-button style="width:100%" type="primary" :loading="switchingDevice" :disabled="!active?.active_model || !canManageModel" @click="switchDevice">
           切换并预热
         </el-button>
         <p v-if="active?.warmup_error" class="error-text">{{ active.warmup_error }}</p>
       </el-card>
 
-      <el-card shadow="never" class="panel-card model-register-card compact-form-card">
-        <template #header>导入模型</template>
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">导入模型</span></template>
         <el-form :model="form" label-position="top">
           <el-form-item label="模型名称" required><el-input v-model="form.name" placeholder="输入模型显示名称" /></el-form-item>
           <el-form-item label="模型路径" required><el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" /></el-form-item>
           <el-form-item label="版本号" required><el-input v-model="form.version" placeholder="输入版本标识" /></el-form-item>
-          <div class="form-actions">
-            <el-button type="primary" :disabled="!canManageModel || !canRegisterModel" @click="register">登记路径</el-button>
-          </div>
+          <el-button type="primary" :disabled="!canManageModel || !canRegisterModel" @click="register">登记路径</el-button>
         </el-form>
-        <div class="model-upload-zone">
+        <div class="bi-model-upload">
           <el-upload :auto-upload="false" :limit="1" :on-change="selectUploadModel">
             <el-button>选择 .pt 文件</el-button>
           </el-upload>
           <el-button type="primary" :disabled="!uploadFileRef" @click="upload">上传模型</el-button>
         </div>
       </el-card>
-    </section>
+    </div>
 
-    <el-card shadow="never" class="panel-card model-library-panel">
+    <el-card shadow="never" class="bi-panel-card">
       <template #header>
-        <div class="toolbar"><span>模型库</span><el-button @click="load">刷新</el-button></div>
+        <div class="bi-card-header">
+          <span class="bi-card-title">模型库</span>
+          <el-button size="small" @click="load">刷新</el-button>
+        </div>
       </template>
       <div class="table-scroll model-table-shell">
-        <el-table :data="models" class="model-table">
+        <el-table :data="models">
           <el-table-column label="序号" width="80">
             <template #default="{ $index }">{{ $index + 1 }}</template>
           </el-table-column>
@@ -87,7 +89,7 @@
           </el-table-column>
           <el-table-column label="操作" width="360" fixed="right">
             <template #default="{ row }">
-              <div class="form-actions table-actions wrap-actions">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <el-button v-if="canManageModel" type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
                 <el-button v-if="canManageModel" size="small" @click="openDisplayName(row)">改名</el-button>
                 <el-button v-if="canManageModel" size="small" @click="openMapping(row)">类别映射</el-button>
@@ -109,7 +111,7 @@
     </el-dialog>
 
     <el-drawer v-model="mappingDrawer" title="类别中英文对照" size="54%">
-      <div class="mapping-toolbar">
+      <div class="bi-model-section">
         <span>模型：{{ selectedModel?.display_name || selectedModel?.name }}</span>
         <el-button type="primary" @click="saveMapping">保存映射</el-button>
       </div>

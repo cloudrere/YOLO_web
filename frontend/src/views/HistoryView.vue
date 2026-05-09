@@ -1,35 +1,27 @@
 <template>
   <AppLayout>
-    <el-card shadow="never" class="panel-card">
+    <el-card shadow="never" class="bi-panel-card">
       <template #header>
-        <div class="toolbar">
-          <span>检测历史</span>
-          <div class="form-actions">
-            <el-button type="danger" :disabled="!selectedRows.length" @click="removeSelected">批量删除</el-button>
-            <el-button @click="exportRows">导出 Excel</el-button>
-            <el-button @click="load">刷新</el-button>
+        <div class="bi-card-header">
+          <span class="bi-card-title">检测历史</span>
+          <div class="bi-header-actions">
+            <el-button type="danger" size="small" :disabled="!selectedRows.length" @click="removeSelected">批量删除</el-button>
+            <el-button size="small" @click="exportRows">导出 Excel</el-button>
+            <el-button size="small" @click="load">刷新</el-button>
           </div>
         </div>
       </template>
-      <el-form :inline="true" :model="filters" class="filter-bar">
-        <el-form-item label="来源类型">
-          <el-select v-model="filters.source_type" clearable placeholder="全部" style="width: 180px">
-            <el-option label="单图" value="image" />
-            <el-option label="批量图片" value="batch_image" />
-            <el-option label="视频" value="video" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="英文类别">
-          <el-input v-model="filters.class_name" clearable placeholder="person / car" />
-        </el-form-item>
-        <el-form-item label="中文类别">
-          <el-input v-model="filters.class_name_zh" clearable placeholder="人 / 汽车" />
-        </el-form-item>
-        <el-form-item label="用户">
-          <el-input v-model="filters.username" clearable placeholder="用户名" />
-        </el-form-item>
-        <el-button type="primary" @click="load">查询</el-button>
-      </el-form>
+      <div class="bi-filter-bar">
+        <el-select v-model="filters.source_type" clearable placeholder="来源类型" style="width:140px">
+          <el-option label="单图" value="image" />
+          <el-option label="批量图片" value="batch_image" />
+          <el-option label="视频" value="video" />
+        </el-select>
+        <el-input v-model="filters.class_name" clearable placeholder="英文类别" style="width:140px" />
+        <el-input v-model="filters.class_name_zh" clearable placeholder="中文类别" style="width:140px" />
+        <el-input v-model="filters.username" clearable placeholder="用户名" style="width:140px" />
+        <el-button type="primary" size="small" @click="load">查询</el-button>
+      </div>
       <div class="table-scroll history-table-shell">
         <el-table :data="rows" @row-click="openDetail" @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="48" />
@@ -55,7 +47,7 @@
           <el-table-column prop="file_name" label="文件名" min-width="180" />
           <el-table-column label="类别" min-width="180">
             <template #default="{ row }">
-              <el-tag v-for="item in row.classes" :key="`${item.class}-${item.class_zh}`" class="tag" type="success">
+              <el-tag v-for="item in row.classes" :key="`${item.class}-${item.class_zh}`" class="tag" type="success" size="small">
                 {{ item.class_zh || item.class }} {{ item.count }}
               </el-tag>
             </template>
@@ -74,20 +66,22 @@
       <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" @current-change="load" />
     </el-card>
     <el-drawer v-model="drawer" title="检测详情" size="64%">
-      <div v-if="detail" class="detail-meta-grid">
+      <div v-if="detail" class="bi-detail-meta">
         <div><span>用户</span><strong>{{ detail.username || detail.user_id || '暂无' }}</strong></div>
         <div><span>模型</span><strong>{{ detail.model_name || '暂无' }}</strong></div>
         <div><span>设备</span><strong>{{ detail.device || '暂无' }}</strong></div>
         <div><span>检测时间</span><strong>{{ detail.created_at_text || detail.created_at }}</strong></div>
         <div><span>参数</span><strong>{{ formatParameters(detail) }}</strong></div>
       </div>
-      <div v-if="detail?.source_type === 'video' && (detail.video_url || detail.video_stream_url)" class="history-video-player">
-        <div class="preview-header"><div><span>视频回放</span><strong>{{ detail.video_url && !localVideoFailed ? '本地检测后视频' : '检测帧流' }}</strong></div></div>
+      <div v-if="detail?.source_type === 'video' && (detail.video_url || detail.video_stream_url)" class="bi-video-player">
+        <div class="bi-preview-header">
+          <div><span>视频回放</span><strong>{{ detail.video_url && !localVideoFailed ? '本地检测后视频' : '检测帧流' }}</strong></div>
+        </div>
         <video v-if="detail.video_url && !localVideoFailed" :key="detail.id" class="history-local-video" :src="mediaUrl(detail.video_url)" controls preload="metadata" playsinline @error="handleVideoError"></video>
         <img v-else-if="detail.video_stream_url" class="video-stream" :src="mediaUrl(detail.video_stream_url || '')" :alt="detail.file_name" />
-        <el-empty v-else description="暂无可播放视频" />
+        <el-empty v-else description="暂无可播放视频" :image-size="60" />
       </div>
-      <div v-if="detail?.source_type !== 'video' && (detail?.original_url || detail?.result_url)" class="compare-grid history-preview">
+      <div v-if="detail?.source_type !== 'video' && (detail?.original_url || detail?.result_url)" class="bi-compare-grid">
         <figure><img v-if="detail.original_url" :src="mediaUrl(detail.original_url)" :alt="detail.file_name" /><figcaption>原图</figcaption></figure>
         <figure><img v-if="detail.result_url" :src="mediaUrl(detail.result_url)" :alt="detail.file_name" /><figcaption>检测图</figcaption></figure>
       </div>
@@ -117,67 +111,25 @@ const pageSize = 20
 const filters = reactive({ source_type: '', class_name: '', class_name_zh: '', username: '' })
 const selectedRows = ref<HistoryItem[]>([])
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function videoThumbUrl(row: HistoryItem) {
-  return row.video_thumb_url || row.result_url || row.original_url
-}
-function filterParams() {
-  return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== ''))
-}
-async function load() {
-  const data = await listHistory(filterParams())
-  rows.value = data.items
-  total.value = data.total
-  selectedRows.value = []
-}
-function handleSelectionChange(selection: HistoryItem[]) {
-  selectedRows.value = selection
-}
-function formatParameters(detail: HistoryDetail | null) {
-  if (!detail) return '-'
-  return `置信度 ${detail.confidence_threshold} / IoU 阈值 ${detail.iou_threshold}`
-}
-async function openDetail(row: HistoryItem) {
-  localVideoFailed.value = false
-  detail.value = await getHistory(row.id)
-  drawer.value = true
-}
-function handleVideoError() {
-  localVideoFailed.value = true
-  ElMessage.warning('本地视频暂不可直接播放，已切换为检测帧流')
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function videoThumbUrl(row: HistoryItem) { return row.video_thumb_url || row.result_url || row.original_url }
+function filterParams() { return Object.fromEntries(Object.entries({ page: page.value, page_size: pageSize, ...filters }).filter(([, value]) => value !== '')) }
+async function load() { const data = await listHistory(filterParams()); rows.value = data.items; total.value = data.total; selectedRows.value = [] }
+function handleSelectionChange(selection: HistoryItem[]) { selectedRows.value = selection }
+function formatParameters(detail: HistoryDetail | null) { if (!detail) return '-'; return `置信度 ${detail.confidence_threshold} / IoU 阈值 ${detail.iou_threshold}` }
+async function openDetail(row: HistoryItem) { localVideoFailed.value = false; detail.value = await getHistory(row.id); drawer.value = true }
+function handleVideoError() { localVideoFailed.value = true; ElMessage.warning('本地视频暂不可直接播放，已切换为检测帧流') }
 async function remove(id: number) {
-  try {
-    await ElMessageBox.confirm('确认删除这条检测历史吗？删除后不可在列表中恢复。', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  await deleteHistory(id)
-  ElMessage.success('检测历史已删除')
-  await load()
+  try { await ElMessageBox.confirm('确认删除这条检测历史吗？', '删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }) } catch { return }
+  await deleteHistory(id); ElMessage.success('检测历史已删除'); await load()
 }
 async function removeSelected() {
   if (!selectedRows.value.length) return
-  try {
-    await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条检测历史吗？删除后不可在列表中恢复。`, '批量删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  await deleteHistoryBatch(selectedRows.value.map((row) => row.id))
-  ElMessage.success('检测历史已批量删除')
-  await load()
+  try { await ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条检测历史吗？`, '批量删除确认', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }) } catch { return }
+  await deleteHistoryBatch(selectedRows.value.map((row) => row.id)); ElMessage.success('检测历史已批量删除'); await load()
 }
 async function exportRows() {
-  const response = await exportHistory(filterParams())
-  const url = URL.createObjectURL(response.data)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '检测历史.xlsx'
-  link.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('检测历史已导出')
+  const response = await exportHistory(filterParams()); const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = '检测历史.xlsx'; link.click(); URL.revokeObjectURL(url); ElMessage.success('检测历史已导出')
 }
 onMounted(load)
 </script>

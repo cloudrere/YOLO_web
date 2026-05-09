@@ -1,37 +1,36 @@
 <template>
   <AppLayout>
-    <section class="training-hero panel-card">
+    <div class="bi-page-header">
       <div>
-        <span class="eyebrow dark">YOLO results.csv</span>
         <h2>训练曲线与质量诊断</h2>
         <p>上传或选择 YOLO 训练生成的 results.csv，查看 Precision、Recall、mAP、Loss、学习率与 AI 训练建议。</p>
       </div>
-      <div class="status-pills">
+      <div style="display:flex;gap:8px">
         <el-tag :type="summary ? 'success' : 'info'">{{ summary ? '已加载摘要' : '等待 CSV' }}</el-tag>
         <el-tag :type="assistantStatus?.configured ? 'success' : 'warning'">{{ aiStatusText }}</el-tag>
       </div>
-    </section>
+    </div>
 
-    <section class="training-workbench">
-      <el-card shadow="never" class="upload-card training-control-panel">
-        <template #header>训练数据</template>
+    <div class="bi-training-layout">
+      <el-card shadow="never" class="bi-panel-card bi-training-sidebar">
+        <template #header><span class="bi-card-title">训练数据</span></template>
         <el-upload drag accept=".csv" :auto-upload="false" :limit="1" :on-change="selectCsv" :on-remove="removeCsv">
           <p>拖拽或选择 YOLO results.csv 文件</p>
         </el-upload>
-        <div class="split-actions training-actions">
+        <div class="bi-action-row two">
           <el-button type="primary" :loading="uploading" :disabled="!csvFile || uploading" @click="uploadCsv">上传并分析</el-button>
           <el-button :loading="loadingFiles" @click="loadFiles">刷新列表</el-button>
         </div>
-        <div class="split-actions training-actions">
+        <div class="bi-action-row three">
           <el-button :disabled="!summary" @click="exportReport">导出报告</el-button>
           <el-button type="danger" plain :disabled="!canManageTraining || !selectedName" @click="removeCurrentAnalysis">删除当前分析</el-button>
           <el-button type="danger" :disabled="!canManageTraining || !files.length" @click="clearAllAnalyses">清空全部分析</el-button>
         </div>
         <el-divider />
-        <el-select v-model="selectedName" filterable placeholder="选择已上传 CSV" class="full" :loading="loadingFiles" @change="loadSummary">
+        <el-select v-model="selectedName" filterable placeholder="选择已上传 CSV" style="width:100%" :loading="loadingFiles" @change="loadSummary">
           <el-option v-for="item in files" :key="item.name" :label="item.name" :value="item.name" />
         </el-select>
-        <div class="table-scroll training-file-table">
+        <div class="table-scroll" style="margin-top:12px">
           <el-table v-loading="loadingFiles" :data="files" empty-text="暂无训练 CSV" @row-click="selectFileRow">
             <el-table-column prop="name" label="文件名" min-width="170" />
             <el-table-column prop="rows" label="Epoch" width="90" />
@@ -40,63 +39,67 @@
         </div>
       </el-card>
 
-      <section class="training-summary-stack">
-        <div class="grid four training-metrics">
-          <el-card v-for="card in summaryCards" :key="card.label" shadow="never" class="metric-card compact-metric">
-            <span>{{ card.label }}</span>
-            <strong>{{ card.value }}</strong>
-            <small>{{ card.desc }}</small>
+      <div class="bi-training-charts">
+        <div class="bi-metric-row">
+          <el-card v-for="card in summaryCards" :key="card.label" shadow="never" class="bi-metric-card">
+            <div class="bi-metric-label">{{ card.label }}</div>
+            <div class="bi-metric-value">{{ card.value }}</div>
+            <div class="bi-metric-desc">{{ card.desc }}</div>
           </el-card>
         </div>
-        <el-card shadow="never" class="panel-card training-warning-card">
-          <template #header>自动风险提示</template>
-          <div v-if="summary?.warnings.length" class="training-warning-list">
+        <el-card shadow="never" class="bi-panel-card">
+          <template #header><span class="bi-card-title">自动风险提示</span></template>
+          <div v-if="summary?.warnings.length" class="bi-training-warning-list">
             <div v-for="item in summary.warnings" :key="item">{{ item }}</div>
           </div>
           <el-empty v-else :description="summary ? '当前摘要未发现明显风险提示' : '加载 CSV 后显示训练风险提示'" />
         </el-card>
-      </section>
-    </section>
+      </div>
+    </div>
 
-    <section class="grid two training-chart-grid">
-      <el-card shadow="never" class="panel-card chart-panel">
+    <div class="bi-chart-row">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>Precision / Recall 曲线</template>
-        <div ref="precisionRecallEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="precisionRecallEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>mAP 曲线</template>
-        <div ref="mapEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="mapEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+    </div>
+    <div class="bi-chart-row">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>训练 / 验证 Loss 曲线</template>
-        <div ref="lossEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="lossEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>最终指标雷达图</template>
-        <div ref="radarEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="radarEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+    </div>
+    <div class="bi-chart-row">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>最终 Loss 柱状对比</template>
-        <div ref="barEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="barEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
+      <el-card shadow="never" class="bi-chart-card">
         <template #header>学习率曲线</template>
-        <div ref="lrEl" v-loading="summaryLoading" class="chart"></div>
+        <div ref="lrEl" v-loading="summaryLoading" class="bi-chart"></div>
       </el-card>
-    </section>
+    </div>
 
-    <el-card shadow="never" class="panel-card training-ai-panel">
+    <el-card shadow="never" class="bi-panel-card" style="margin-top:20px">
       <template #header>
-        <div class="toolbar">
-          <span>AI 训练分析</span>
+        <div class="bi-card-header">
+          <span class="bi-card-title">AI 训练分析</span>
           <el-button type="primary" :loading="aiLoading" :disabled="!canUseAi" @click="generateAiReport">生成 AI 报告</el-button>
         </div>
       </template>
-      <div class="training-ai-state">
+      <div class="bi-training-ai-state">
         <el-tag :type="canUseAi ? 'success' : 'warning'">{{ aiActionText }}</el-tag>
         <span>AI 会基于当前 summary 生成训练质量分析、风险判断和下一步优化建议。</span>
       </div>
-      <div v-if="aiReport" class="assistant-answer training-ai-answer">{{ aiReport }}</div>
+      <div v-if="aiReport" class="bi-training-ai-answer">{{ aiReport }}</div>
       <el-empty v-else description="点击生成后显示 AI 训练报告" />
     </el-card>
   </AppLayout>
@@ -331,7 +334,7 @@ function renderPrecisionRecallChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#d69f32'],
+    color: ['#2563eb', '#d97706'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
@@ -348,7 +351,7 @@ function renderMapChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#2f7d67', '#b88427'],
+    color: ['#0284c7', '#d97706'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
@@ -365,7 +368,7 @@ function renderLossChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#4f7c9b', '#7a9b4f', '#d69f32', '#b94a3a', '#8c6d31'],
+    color: ['#2563eb', '#0284c7', '#16a34a', '#d97706', '#dc2626', '#8b5cf6'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0, type: 'scroll' },
     grid: chartBaseGrid(54),
@@ -387,7 +390,7 @@ function renderRadarChart() {
   if (!chart || !data) return
   const values = data.radar.map((item) => Number(item.value) || 0)
   chart.setOption({
-    color: ['#1f6f5b'],
+    color: ['#2563eb'],
     tooltip: {},
     radar: { indicator: data.radar.map((item) => ({ name: String(item.name), max: 1 })), radius: '66%' },
     series: [{ type: 'radar', areaStyle: { opacity: 0.18 }, data: [{ name: '最终指标', value: values }] }],
@@ -398,7 +401,7 @@ function renderBarChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#d69f32'],
+    color: ['#2563eb'],
     tooltip: { trigger: 'axis' },
     grid: { left: 112, right: 18, top: 20, bottom: 28 },
     xAxis: { type: 'value' },
@@ -411,7 +414,7 @@ function renderLearningRateChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#d69f32', '#4f7c9b'],
+    color: ['#2563eb', '#d97706', '#0284c7'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),

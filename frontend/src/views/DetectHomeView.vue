@@ -1,25 +1,24 @@
 <template>
   <AppLayout>
-    <section class="detect-home-hero panel-card">
+    <div class="bi-page-header">
       <div>
-        <span class="eyebrow dark">智能检测入口</span>
         <h2>选择独立检测工作流</h2>
         <p>四种检测模式拆分为独立页面，参数、任务、预览和结果互不串扰。</p>
       </div>
-      <el-tag type="success">独立状态</el-tag>
-    </section>
+      <el-tag type="success" size="small">独立状态</el-tag>
+    </div>
 
-    <section class="detect-mode-grid">
-      <RouterLink v-for="item in modes" :key="item.path" :to="item.path" class="detect-mode-card panel-card">
-        <span>{{ item.kicker }}</span>
+    <div class="bi-mode-grid">
+      <RouterLink v-for="item in modes" :key="item.path" :to="item.path" class="bi-mode-card">
+        <div class="bi-mode-icon">{{ item.kicker.charAt(0) }}</div>
         <h3>{{ item.title }}</h3>
         <p>{{ item.description }}</p>
-        <div class="mode-card-footer">
-          <el-tag>{{ item.tag }}</el-tag>
-          <strong>进入检测</strong>
+        <div class="bi-mode-footer">
+          <el-tag size="small">{{ item.tag }}</el-tag>
+          <span class="bi-mode-arrow">进入检测 &rarr;</span>
         </div>
       </RouterLink>
-    </section>
+    </div>
   </AppLayout>
 </template>
 

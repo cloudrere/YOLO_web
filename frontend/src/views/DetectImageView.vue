@@ -1,20 +1,18 @@
 <template>
   <AppLayout>
-    <section class="detection-status-strip panel-card">
+    <div class="bi-page-header">
       <div>
-        <span class="eyebrow dark">单图检测</span>
         <h2>图片检测与标注预览</h2>
         <p>上传一张图片，按当前参数生成检测图和目标列表，结果可选择保存到历史记录。</p>
       </div>
-      <div class="status-pills">
-        <el-tag type="success">独立页面</el-tag>
-        <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
+      <div class="bi-status-strip">
+        <el-tag :type="params.save_history ? 'success' : 'warning'" size="small">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
       </div>
-    </section>
+    </div>
 
-    <section class="detection-workbench single-flow">
-      <aside class="detection-control-rail panel-card">
-        <div class="parameter-panel">
+    <div class="bi-workbench">
+      <aside class="bi-control-rail">
+        <div class="bi-param-block">
           <h3>检测参数</h3>
           <label>置信度：{{ params.confidence.toFixed(2) }}</label>
           <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" />
@@ -22,12 +20,12 @@
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" />
           <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" />
         </div>
-        <div class="mode-config">
+        <div>
           <h3>上传图片</h3>
           <el-upload drag :auto-upload="false" :limit="1" :on-change="selectImage" :on-remove="removeImage">
             <p>选择一张图片生成标注结果</p>
           </el-upload>
-          <div class="split-actions">
+          <div class="bi-action-row two">
             <el-button type="primary" size="large" :disabled="!imageFile || loading" :loading="loading" @click="runImage">开始检测</el-button>
             <el-button size="large" :disabled="loading || !hasResult" @click="clearResults">清除</el-button>
           </div>
@@ -35,33 +33,35 @@
         </div>
       </aside>
 
-      <main class="detection-preview-stage panel-card">
-        <div class="preview-header">
+      <main class="bi-preview-stage">
+        <div class="bi-preview-header">
           <div><span>原图 / 检测图</span><strong>{{ result ? '检测完成' : loading ? '检测中' : '等待图片' }}</strong></div>
-          <el-tag :type="loading ? 'warning' : result ? 'success' : 'info'">{{ loading ? '检测中' : result ? '已完成' : '待上传' }}</el-tag>
+          <el-tag :type="loading ? 'warning' : result ? 'success' : 'info'" size="small">{{ loading ? '检测中' : result ? '已完成' : '待上传' }}</el-tag>
         </div>
-        <div class="preview-canvas">
-          <div v-if="result?.original_url || result?.result_url" class="compare-grid">
+        <div class="bi-preview-canvas">
+          <div v-if="result?.original_url || result?.result_url" class="bi-compare-grid">
             <figure><img v-if="result.original_url" :src="mediaUrl(result.original_url)" alt="原图" /><figcaption>原图</figcaption></figure>
             <figure><img v-if="result.result_url" :src="mediaUrl(result.result_url)" alt="检测图" /><figcaption>检测图</figcaption></figure>
           </div>
-          <el-empty v-else :description="loading ? '正在推理，请稍候' : '上传图片后显示对比图'" />
+          <el-empty v-else :description="loading ? '正在推理，请稍候' : '上传图片后显示对比图'" :image-size="60" />
         </div>
-        <div class="preview-metrics">
+        <div class="bi-preview-stats">
           <div><strong>{{ result?.results.length ?? 0 }}</strong><span>目标数</span></div>
           <div><strong>{{ result?.duration_ms ?? 0 }}</strong><span>耗时(ms)</span></div>
           <div><strong>{{ topClass }}</strong><span>高频类别</span></div>
         </div>
       </main>
-    </section>
+    </div>
 
-    <section class="detection-inspector panel-card">
-      <div class="inspector-header">
-        <div><span class="eyebrow dark">结果详情</span><h3>单图结构化结果</h3></div>
-        <el-button :disabled="loading || !hasResult" @click="clearResults">清除结果</el-button>
-      </div>
+    <el-card shadow="never" class="bi-panel-card">
+      <template #header>
+        <div class="bi-card-header">
+          <span class="bi-card-title">单图结构化结果</span>
+          <el-button size="small" :disabled="loading || !hasResult" @click="clearResults">清除结果</el-button>
+        </div>
+      </template>
       <DetectionResultTable :results="result?.results || []" />
-    </section>
+    </el-card>
   </AppLayout>
 </template>
 
@@ -89,37 +89,18 @@ const topClass = computed(() => {
   return Object.values(counts).sort((a, b) => b.count - a.count)[0].label
 })
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function selectImage(file: UploadFile) {
-  imageFile.value = file.raw || null
-}
-function removeImage() {
-  imageFile.value = null
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function selectImage(file: UploadFile) { imageFile.value = file.raw || null }
+function removeImage() { imageFile.value = null }
 async function runImage() {
   if (!imageFile.value) return
-  loading.value = true
-  errorText.value = ''
-  try {
-    result.value = await detectImage(imageFile.value, { ...params })
-    ElMessage.success('单图检测已完成')
-  } catch (error: any) {
-    errorText.value = error?.message || '单图检测失败'
-    ElMessage.error(errorText.value)
-  } finally {
-    loading.value = false
-  }
+  loading.value = true; errorText.value = ''
+  try { result.value = await detectImage(imageFile.value, { ...params }); ElMessage.success('单图检测已完成') }
+  catch (error: any) { errorText.value = error?.message || '单图检测失败'; ElMessage.error(errorText.value) }
+  finally { loading.value = false }
 }
 async function clearResults() {
-  try {
-    await ElMessageBox.confirm('确认清除当前单图检测结果和预览图吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  result.value = null
-  errorText.value = ''
-  ElMessage.success('检测结果已清除')
+  try { await ElMessageBox.confirm('确认清除当前单图检测结果和预览图吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' }) } catch { return }
+  result.value = null; errorText.value = ''; ElMessage.success('检测结果已清除')
 }
 </script>

@@ -1,32 +1,39 @@
 <template>
   <AppLayout>
-    <section class="grid">
-      <el-card shadow="never" class="panel-card">
-        <template #header>创建用户</template>
-        <el-form :model="form" label-width="110px">
-          <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-          <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
-          <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
-          <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
-          <el-form-item label="角色">
-            <el-select v-model="form.role_ids" multiple style="width: 100%">
-              <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
-            </el-select>
-          </el-form-item>
-          <el-button type="primary" @click="create">创建用户</el-button>
-        </el-form>
-      </el-card>
-    </section>
-    <el-card shadow="never" class="panel-card">
-      <template #header>
-        <div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div>
-      </template>
-      <el-form :inline="true" class="filter-bar">
-        <el-form-item label="用户查询">
-          <el-input v-model="keyword" clearable placeholder="输入用户名关键词" @keyup.enter="load" />
+    <div class="bi-page-header">
+      <div>
+        <h2>用户管理</h2>
+        <p>创建用户、分配角色、管理账号状态与密码重置。</p>
+      </div>
+    </div>
+
+    <el-card shadow="never" class="bi-panel-card">
+      <template #header><span class="bi-card-title">创建用户</span></template>
+      <el-form :model="form" label-width="110px">
+        <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
+        <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
+        <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
+        <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="form.role_ids" multiple style="width: 100%">
+            <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
+          </el-select>
         </el-form-item>
-        <el-button type="primary" @click="load">查询</el-button>
+        <el-button type="primary" @click="create">创建用户</el-button>
       </el-form>
+    </el-card>
+
+    <el-card shadow="never" class="bi-panel-card" style="margin-top:20px">
+      <template #header>
+        <div class="bi-card-header">
+          <span class="bi-card-title">用户列表</span>
+          <el-button size="small" @click="load">刷新</el-button>
+        </div>
+      </template>
+      <div class="bi-filter-bar">
+        <el-input v-model="keyword" clearable placeholder="输入用户名关键词" style="width:240px" @keyup.enter="load" />
+        <el-button type="primary" size="small" @click="load">查询</el-button>
+      </div>
       <div class="table-scroll user-table-shell">
         <el-table :data="users">
           <el-table-column prop="id" label="ID" width="80" />
@@ -48,7 +55,7 @@
           </el-table-column>
           <el-table-column label="操作" width="260">
             <template #default="{ row }">
-              <div class="form-actions table-actions wrap-actions">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <el-button size="small" :type="row.is_active ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.is_active ? '停用' : '启用' }}</el-button>
                 <el-button size="small" @click="openResetPassword(row)">重置密码</el-button>
                 <el-button type="danger" size="small" @click="remove(row.id)">删除</el-button>
@@ -58,6 +65,7 @@
         </el-table>
       </div>
     </el-card>
+
     <el-dialog v-model="resetDialog" title="重置密码" width="420px">
       <el-form label-position="top">
         <el-form-item label="用户名"><el-input :model-value="selectedUser?.username || ''" disabled /></el-form-item>

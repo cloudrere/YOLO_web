@@ -1,65 +1,62 @@
 <template>
   <AppLayout>
-    <section class="maintenance-hero panel-card">
+    <div class="bi-page-header">
       <div>
-        <span class="eyebrow dark">System Maintenance</span>
         <h2>系统维护</h2>
         <p>集中检查 GPU、模型、数据库和文件系统状态，并执行高风险清理操作。</p>
       </div>
-      <div class="form-actions">
-        <el-button :loading="loading" @click="loadStatus">刷新状态</el-button>
-      </div>
-    </section>
+      <el-button :loading="loading" @click="loadStatus">刷新状态</el-button>
+    </div>
 
-    <section class="grid two maintenance-status-grid">
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>GPU 状态</template>
-        <div class="status-line"><span>CUDA</span><el-tag :type="status?.gpu.cuda_available ? 'success' : 'danger'">{{ status?.gpu.cuda_available ? '可用' : '不可用' }}</el-tag></div>
-        <div class="status-line"><span>torch</span><strong>{{ status?.gpu.torch_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>CUDA 运行时</span><strong>{{ status?.gpu.torch_cuda_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>GPU 名称</span><strong>{{ status?.gpu.gpu_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>显存</span><strong>{{ formatBytes(status?.gpu.memory_total) }}</strong></div>
-        <div class="diagnostic-list">
-          <div v-for="item in status?.gpu.diagnostics || []" :key="`${item.name}-${item.message}`">
+    <div class="bi-maintenance-grid">
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">GPU 状态</span></template>
+        <div class="bi-status-line"><span>CUDA</span><el-tag :type="status?.gpu.cuda_available ? 'success' : 'danger'">{{ status?.gpu.cuda_available ? '可用' : '不可用' }}</el-tag></div>
+        <div class="bi-status-line"><span>torch</span><strong>{{ status?.gpu.torch_version || '未检测到' }}</strong></div>
+        <div class="bi-status-line"><span>CUDA 运行时</span><strong>{{ status?.gpu.torch_cuda_version || '未检测到' }}</strong></div>
+        <div class="bi-status-line"><span>GPU 名称</span><strong>{{ status?.gpu.gpu_name || '暂无' }}</strong></div>
+        <div class="bi-status-line"><span>显存</span><strong>{{ formatBytes(status?.gpu.memory_total) }}</strong></div>
+        <div class="bi-diagnostic-list">
+          <div v-for="item in status?.gpu.diagnostics || []" :key="`${item.name}-${item.message}`" class="bi-diagnostic-row">
             <el-tag :type="tagType(item.status)">{{ item.name }}</el-tag>
             <span>{{ item.message }}</span>
           </div>
         </div>
       </el-card>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>模型状态</template>
-        <div class="status-line"><span>当前激活模型</span><strong>{{ status?.model.active_model_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>文件完整性</span><el-tag :type="status?.model.active_model_exists ? 'success' : 'danger'">{{ status?.model.active_model_exists ? '文件存在' : '文件缺失' }}</el-tag></div>
-        <div class="status-line"><span>模型数量</span><strong>{{ status?.model.total_models ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.model.active_model_path || '暂无模型路径' }}</div>
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">模型状态</span></template>
+        <div class="bi-status-line"><span>当前激活模型</span><strong>{{ status?.model.active_model_name || '暂无' }}</strong></div>
+        <div class="bi-status-line"><span>文件完整性</span><el-tag :type="status?.model.active_model_exists ? 'success' : 'danger'">{{ status?.model.active_model_exists ? '文件存在' : '文件缺失' }}</el-tag></div>
+        <div class="bi-status-line"><span>模型数量</span><strong>{{ status?.model.total_models ?? 0 }}</strong></div>
+        <div class="bi-path-box">{{ status?.model.active_model_path || '暂无模型路径' }}</div>
       </el-card>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>数据库状态</template>
-        <div class="status-line"><span>连接状态</span><el-tag :type="status?.database.connected ? 'success' : 'danger'">{{ status?.database.connected ? '已连接' : '异常' }}</el-tag></div>
-        <div class="status-line"><span>表完整性</span><el-tag :type="status?.database.tables_ok ? 'success' : 'danger'">{{ status?.database.tables_ok ? '完整' : '缺失' }}</el-tag></div>
-        <div class="status-line"><span>表数量</span><strong>{{ status?.database.table_count ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.database.missing_tables?.length ? `缺失表：${status.database.missing_tables.join(', ')}` : '关键表结构正常' }}</div>
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">数据库状态</span></template>
+        <div class="bi-status-line"><span>连接状态</span><el-tag :type="status?.database.connected ? 'success' : 'danger'">{{ status?.database.connected ? '已连接' : '异常' }}</el-tag></div>
+        <div class="bi-status-line"><span>表完整性</span><el-tag :type="status?.database.tables_ok ? 'success' : 'danger'">{{ status?.database.tables_ok ? '完整' : '缺失' }}</el-tag></div>
+        <div class="bi-status-line"><span>表数量</span><strong>{{ status?.database.table_count ?? 0 }}</strong></div>
+        <div class="bi-path-box">{{ status?.database.missing_tables?.length ? `缺失表：${status.database.missing_tables.join(', ')}` : '关键表结构正常' }}</div>
       </el-card>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>文件系统</template>
-        <div class="status-line"><span>磁盘剩余</span><strong>{{ formatBytes(status?.filesystem.disk.free) }}</strong></div>
-        <div class="status-line"><span>磁盘总量</span><strong>{{ formatBytes(status?.filesystem.disk.total) }}</strong></div>
-        <div class="maintenance-paths">
-          <div v-for="(item, name) in status?.filesystem.paths || {}" :key="name">
+      <el-card shadow="never" class="bi-panel-card">
+        <template #header><span class="bi-card-title">文件系统</span></template>
+        <div class="bi-status-line"><span>磁盘剩余</span><strong>{{ formatBytes(status?.filesystem.disk.free) }}</strong></div>
+        <div class="bi-status-line"><span>磁盘总量</span><strong>{{ formatBytes(status?.filesystem.disk.total) }}</strong></div>
+        <div class="bi-diagnostic-list">
+          <div v-for="(item, name) in status?.filesystem.paths || {}" :key="name" class="bi-diagnostic-row">
             <el-tag :type="item.exists && item.is_dir ? 'success' : 'danger'">{{ name }}</el-tag>
             <span>{{ item.path }}</span>
           </div>
         </div>
       </el-card>
-    </section>
+    </div>
 
-    <el-card shadow="never" class="panel-card maintenance-actions-panel">
-      <template #header>维护操作</template>
-      <div class="maintenance-actions-grid">
-        <div v-for="item in actions" :key="item.key" class="maintenance-action-card">
+    <el-card shadow="never" class="bi-panel-card">
+      <template #header><span class="bi-card-title">维护操作</span></template>
+      <div class="bi-maintenance-actions-grid">
+        <div v-for="item in actions" :key="item.key" class="bi-maintenance-action-card">
           <div>
             <h3>{{ item.title }}</h3>
             <p>{{ item.desc }}</p>
