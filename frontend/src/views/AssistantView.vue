@@ -16,21 +16,32 @@
         <el-button v-for="item in prompts" :key="item" text @click="question = item">{{ item }}</el-button>
         <div class="assistant-status-box">
           <span>服务状态</span>
-          <strong>{{ status?.configured ? '可用' : '未配置' }}</strong>
+          <strong>
+            <StatusPulse :status="status?.configured ? 'success' : 'danger'" size="sm" />
+            {{ status?.configured ? '可用' : '未配置' }}
+          </strong>
           <small>{{ status?.model || '等待配置 AI_ASSISTANT_API_KEY' }}</small>
         </div>
       </aside>
 
       <main class="assistant-chat-panel panel-card">
-        <div class="assistant-conversation">
+        <div class="assistant-conversation" ref="chatEl">
           <div class="chat-bubble assistant">
             <strong>AI深度学习助手</strong>
             <p>我可以帮助解释检测结果、排查 GPU/CUDA、整理模型管理和深度学习训练分析问题。</p>
           </div>
-          <template v-for="message in messages" :key="message.id">
-            <div class="chat-bubble user"><strong>你</strong><p>{{ message.question }}</p></div>
-            <div class="chat-bubble assistant"><strong>AI 助手</strong><p>{{ message.answer }}</p></div>
-          </template>
+          <TransitionGroup name="list">
+            <template v-for="message in messages" :key="message.id">
+              <div class="chat-bubble user">
+                <strong>你</strong>
+                <p>{{ message.question }}</p>
+              </div>
+              <div class="chat-bubble assistant">
+                <strong>AI 助手</strong>
+                <p>{{ message.answer }}</p>
+              </div>
+            </template>
+          </TransitionGroup>
           <el-empty v-if="!messages.length" :description="status?.configured ? '发送问题后显示对话记录' : '后端未配置 AI_ASSISTANT_API_KEY，配置后即可使用'" />
         </div>
         <div class="assistant-input-bar">
@@ -48,6 +59,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import StatusPulse from '@/components/common/StatusPulse.vue'
 import { askAssistant, getAssistantStatus, type AssistantStatus } from '@/api/assistant'
 
 const status = ref<AssistantStatus | null>(null)
@@ -74,3 +86,12 @@ async function send() {
 }
 onMounted(loadStatus)
 </script>
+
+<style scoped>
+.assistant-status-box strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+</style>

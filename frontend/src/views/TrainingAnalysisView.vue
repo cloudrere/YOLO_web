@@ -41,48 +41,34 @@
       </el-card>
 
       <section class="training-summary-stack">
-        <div class="grid four training-metrics">
-          <el-card v-for="card in summaryCards" :key="card.label" shadow="never" class="metric-card compact-metric">
-            <span>{{ card.label }}</span>
-            <strong>{{ card.value }}</strong>
-            <small>{{ card.desc }}</small>
-          </el-card>
-        </div>
+        <Transition name="list">
+          <div v-if="summary" key="summary" class="grid four training-metrics stagger-container">
+            <MotionPanel v-for="(card, i) in summaryCards" :key="card.label" effect="glow" :style="{ animationDelay: i * 80 + 'ms' }">
+              <div class="metric-card compact-metric">
+                <span>{{ card.label }}</span>
+                <AnimatedNumber :value="typeof card.value === 'number' ? card.value : 0" />
+                <small>{{ card.desc }}</small>
+              </div>
+            </MotionPanel>
+          </div>
+        </Transition>
         <el-card shadow="never" class="panel-card training-warning-card">
           <template #header>自动风险提示</template>
           <div v-if="summary?.warnings.length" class="training-warning-list">
-            <div v-for="item in summary.warnings" :key="item">{{ item }}</div>
+            <div v-for="(item, i) in summary.warnings" :key="i" :style="{ animationDelay: i * 80 + 'ms' }">{{ item }}</div>
           </div>
           <el-empty v-else :description="summary ? '当前摘要未发现明显风险提示' : '加载 CSV 后显示训练风险提示'" />
         </el-card>
       </section>
     </section>
 
-    <section class="grid two training-chart-grid">
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>Precision / Recall 曲线</template>
-        <div ref="precisionRecallEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>mAP 曲线</template>
-        <div ref="mapEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>训练 / 验证 Loss 曲线</template>
-        <div ref="lossEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>最终指标雷达图</template>
-        <div ref="radarEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>最终 Loss 柱状对比</template>
-        <div ref="barEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
-      <el-card shadow="never" class="panel-card chart-panel">
-        <template #header>学习率曲线</template>
-        <div ref="lrEl" v-loading="summaryLoading" class="chart"></div>
-      </el-card>
+    <section class="grid two training-chart-grid stagger-container">
+      <MotionPanel v-for="(panel, i) in chartPanels" :key="panel.title" effect="glow" :style="{ animationDelay: i * 60 + 'ms' }">
+        <el-card shadow="never" class="panel-card chart-panel">
+          <template #header>{{ panel.title }}</template>
+          <div :ref="(el) => { if (el && panel.setRef) panel.setRef(el as HTMLElement) }" v-loading="summaryLoading" class="chart"></div>
+        </el-card>
+      </MotionPanel>
     </section>
 
     <el-card shadow="never" class="panel-card training-ai-panel">
@@ -96,8 +82,10 @@
         <el-tag :type="canUseAi ? 'success' : 'warning'">{{ aiActionText }}</el-tag>
         <span>AI 会基于当前 summary 生成训练质量分析、风险判断和下一步优化建议。</span>
       </div>
-      <div v-if="aiReport" class="assistant-answer training-ai-answer">{{ aiReport }}</div>
-      <el-empty v-else description="点击生成后显示 AI 训练报告" />
+      <Transition name="list">
+        <div v-if="aiReport" key="report" class="assistant-answer training-ai-answer">{{ aiReport }}</div>
+      </Transition>
+      <el-empty v-if="!aiReport" description="点击生成后显示 AI 训练报告" />
     </el-card>
   </AppLayout>
 </template>
@@ -107,6 +95,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import AnimatedNumber from '@/components/common/AnimatedNumber.vue'
+import MotionPanel from '@/components/common/MotionPanel.vue'
 import { getAssistantStatus, type AssistantStatus } from '@/api/assistant'
 import {
   clearTrainingAnalyses,
@@ -142,9 +132,9 @@ let charts: echarts.ECharts[] = []
 
 const summaryCards = computed(() => [
   { label: '总 Epoch', value: summary.value?.epochs.length ?? 0, desc: summary.value?.name || '上传 results.csv 后解析' },
-  { label: '最佳 Epoch', value: summary.value?.best_epoch ?? '-', desc: '按 mAP50 峰值定位' },
-  { label: '最佳 mAP50', value: formatRatio(summary.value?.best_map50), desc: '训练过程最高 mAP50' },
-  { label: '最终 Recall', value: formatRatio(summary.value?.final_metrics.recall), desc: '最后一轮召回率' },
+  { label: '最佳 Epoch', value: summary.value?.best_epoch ?? 0, desc: '按 mAP50 峰值定位' },
+  { label: '最佳 mAP50', value: formatRatioNumber(summary.value?.best_map50), desc: '训练过程最高 mAP50' },
+  { label: '最终 Recall', value: formatRatioNumber(summary.value?.final_metrics.recall), desc: '最后一轮召回率' },
 ])
 const canUseAi = computed(() => Boolean(summary.value && auth.hasPermission('assistant:use') && assistantStatus.value?.configured))
 const canManageTraining = computed(() => auth.hasPermission('history:manage'))
@@ -158,6 +148,14 @@ const aiActionText = computed(() => {
   if (!assistantStatus.value?.configured) return '后端未配置 AI_ASSISTANT_API_KEY'
   return '可生成训练分析报告'
 })
+const chartPanels = computed(() => [
+  { title: 'Precision / Recall 曲线', setRef: (el: HTMLElement) => { precisionRecallEl.value = el } },
+  { title: 'mAP 曲线', setRef: (el: HTMLElement) => { mapEl.value = el } },
+  { title: '训练 / 验证 Loss 曲线', setRef: (el: HTMLElement) => { lossEl.value = el } },
+  { title: '最终指标雷达图', setRef: (el: HTMLElement) => { radarEl.value = el } },
+  { title: '最终 Loss 柱状对比', setRef: (el: HTMLElement) => { barEl.value = el } },
+  { title: '学习率曲线', setRef: (el: HTMLElement) => { lrEl.value = el } },
+])
 
 onMounted(async () => {
   window.addEventListener('resize', resizeCharts)
@@ -331,7 +329,7 @@ function renderPrecisionRecallChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#d69f32'],
+    color: ['#2563eb', '#ea580c'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
@@ -348,7 +346,7 @@ function renderMapChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#2f7d67', '#b88427'],
+    color: ['#2563eb', '#0891b2'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
@@ -365,7 +363,7 @@ function renderLossChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#4f7c9b', '#7a9b4f', '#d69f32', '#b94a3a', '#8c6d31'],
+    color: ['#2563eb', '#7c3aed', '#0891b2', '#ea580c', '#dc2626', '#d97706'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0, type: 'scroll' },
     grid: chartBaseGrid(54),
@@ -387,7 +385,7 @@ function renderRadarChart() {
   if (!chart || !data) return
   const values = data.radar.map((item) => Number(item.value) || 0)
   chart.setOption({
-    color: ['#1f6f5b'],
+    color: ['#2563eb'],
     tooltip: {},
     radar: { indicator: data.radar.map((item) => ({ name: String(item.name), max: 1 })), radius: '66%' },
     series: [{ type: 'radar', areaStyle: { opacity: 0.18 }, data: [{ name: '最终指标', value: values }] }],
@@ -398,7 +396,7 @@ function renderBarChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#d69f32'],
+    color: ['#ea580c'],
     tooltip: { trigger: 'axis' },
     grid: { left: 112, right: 18, top: 20, bottom: 28 },
     xAxis: { type: 'value' },
@@ -411,7 +409,7 @@ function renderLearningRateChart() {
   const data = summary.value
   if (!chart || !data) return
   chart.setOption({
-    color: ['#1f6f5b', '#d69f32', '#4f7c9b'],
+    color: ['#2563eb', '#ea580c', '#0891b2'],
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
     grid: chartBaseGrid(46),
@@ -428,4 +426,21 @@ function formatRatio(value?: number | null) {
   if (value === null || value === undefined) return '-'
   return `${(Number(value) * 100).toFixed(1)}%`
 }
+function formatRatioNumber(value?: number | null): number {
+  if (value === null || value === undefined) return 0
+  return Number(value)
+}
 </script>
+
+<style scoped>
+.training-warning-list div {
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  color: var(--color-ink);
+  animation: slide-up-fade var(--motion-normal) var(--ease-emphasized) both;
+}
+</style>

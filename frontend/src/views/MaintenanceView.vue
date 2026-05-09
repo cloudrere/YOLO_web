@@ -11,49 +11,57 @@
       </div>
     </section>
 
-    <section class="grid two maintenance-status-grid">
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>GPU 状态</template>
-        <div class="status-line"><span>CUDA</span><el-tag :type="status?.gpu.cuda_available ? 'success' : 'danger'">{{ status?.gpu.cuda_available ? '可用' : '不可用' }}</el-tag></div>
-        <div class="status-line"><span>torch</span><strong>{{ status?.gpu.torch_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>CUDA 运行时</span><strong>{{ status?.gpu.torch_cuda_version || '未检测到' }}</strong></div>
-        <div class="status-line"><span>GPU 名称</span><strong>{{ status?.gpu.gpu_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>显存</span><strong>{{ formatBytes(status?.gpu.memory_total) }}</strong></div>
-        <div class="diagnostic-list">
-          <div v-for="item in status?.gpu.diagnostics || []" :key="`${item.name}-${item.message}`">
-            <el-tag :type="tagType(item.status)">{{ item.name }}</el-tag>
-            <span>{{ item.message }}</span>
+    <section class="grid two maintenance-status-grid stagger-container">
+      <MotionPanel effect="glow" style="animation-delay:0ms">
+        <el-card shadow="never" class="panel-card maintenance-status-card">
+          <template #header><div class="card-header-row"><span>GPU 状态</span><StatusPulse :status="status?.gpu?.cuda_available ? 'success' : 'danger'" size="sm" /></div></template>
+          <div class="status-line"><span>CUDA</span><el-tag :type="status?.gpu.cuda_available ? 'success' : 'danger'">{{ status?.gpu.cuda_available ? '可用' : '不可用' }}</el-tag></div>
+          <div class="status-line"><span>torch</span><strong>{{ status?.gpu.torch_version || '未检测到' }}</strong></div>
+          <div class="status-line"><span>CUDA 运行时</span><strong>{{ status?.gpu.torch_cuda_version || '未检测到' }}</strong></div>
+          <div class="status-line"><span>GPU 名称</span><strong>{{ status?.gpu.gpu_name || '暂无' }}</strong></div>
+          <div class="status-line"><span>显存</span><strong>{{ formatBytes(status?.gpu.memory_total) }}</strong></div>
+          <div class="diagnostic-list">
+            <div v-for="item in status?.gpu.diagnostics || []" :key="`${item.name}-${item.message}`">
+              <el-tag :type="tagType(item.status)">{{ item.name }}</el-tag>
+              <span>{{ item.message }}</span>
+            </div>
           </div>
-        </div>
-      </el-card>
+        </el-card>
+      </MotionPanel>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>模型状态</template>
-        <div class="status-line"><span>当前激活模型</span><strong>{{ status?.model.active_model_name || '暂无' }}</strong></div>
-        <div class="status-line"><span>文件完整性</span><el-tag :type="status?.model.active_model_exists ? 'success' : 'danger'">{{ status?.model.active_model_exists ? '文件存在' : '文件缺失' }}</el-tag></div>
-        <div class="status-line"><span>模型数量</span><strong>{{ status?.model.total_models ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.model.active_model_path || '暂无模型路径' }}</div>
-      </el-card>
+      <MotionPanel effect="glow" style="animation-delay:100ms">
+        <el-card shadow="never" class="panel-card maintenance-status-card">
+          <template #header><div class="card-header-row"><span>模型状态</span><StatusPulse :status="status?.model?.active_model_exists ? 'success' : 'danger'" size="sm" /></div></template>
+          <div class="status-line"><span>当前激活模型</span><strong>{{ status?.model.active_model_name || '暂无' }}</strong></div>
+          <div class="status-line"><span>文件完整性</span><el-tag :type="status?.model.active_model_exists ? 'success' : 'danger'">{{ status?.model.active_model_exists ? '文件存在' : '文件缺失' }}</el-tag></div>
+          <div class="status-line"><span>模型数量</span><strong>{{ status?.model.total_models ?? 0 }}</strong></div>
+          <div class="path-box">{{ status?.model.active_model_path || '暂无模型路径' }}</div>
+        </el-card>
+      </MotionPanel>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>数据库状态</template>
-        <div class="status-line"><span>连接状态</span><el-tag :type="status?.database.connected ? 'success' : 'danger'">{{ status?.database.connected ? '已连接' : '异常' }}</el-tag></div>
-        <div class="status-line"><span>表完整性</span><el-tag :type="status?.database.tables_ok ? 'success' : 'danger'">{{ status?.database.tables_ok ? '完整' : '缺失' }}</el-tag></div>
-        <div class="status-line"><span>表数量</span><strong>{{ status?.database.table_count ?? 0 }}</strong></div>
-        <div class="path-box">{{ status?.database.missing_tables?.length ? `缺失表：${status.database.missing_tables.join(', ')}` : '关键表结构正常' }}</div>
-      </el-card>
+      <MotionPanel effect="glow" style="animation-delay:200ms">
+        <el-card shadow="never" class="panel-card maintenance-status-card">
+          <template #header><div class="card-header-row"><span>数据库状态</span><StatusPulse :status="status?.database?.connected ? 'success' : 'danger'" size="sm" /></div></template>
+          <div class="status-line"><span>连接状态</span><el-tag :type="status?.database.connected ? 'success' : 'danger'">{{ status?.database.connected ? '已连接' : '异常' }}</el-tag></div>
+          <div class="status-line"><span>表完整性</span><el-tag :type="status?.database.tables_ok ? 'success' : 'danger'">{{ status?.database.tables_ok ? '完整' : '缺失' }}</el-tag></div>
+          <div class="status-line"><span>表数量</span><strong>{{ status?.database.table_count ?? 0 }}</strong></div>
+          <div class="path-box">{{ status?.database.missing_tables?.length ? `缺失表：${status.database.missing_tables.join(', ')}` : '关键表结构正常' }}</div>
+        </el-card>
+      </MotionPanel>
 
-      <el-card shadow="never" class="panel-card maintenance-status-card">
-        <template #header>文件系统</template>
-        <div class="status-line"><span>磁盘剩余</span><strong>{{ formatBytes(status?.filesystem.disk.free) }}</strong></div>
-        <div class="status-line"><span>磁盘总量</span><strong>{{ formatBytes(status?.filesystem.disk.total) }}</strong></div>
-        <div class="maintenance-paths">
-          <div v-for="(item, name) in status?.filesystem.paths || {}" :key="name">
-            <el-tag :type="item.exists && item.is_dir ? 'success' : 'danger'">{{ name }}</el-tag>
-            <span>{{ item.path }}</span>
+      <MotionPanel effect="glow" style="animation-delay:300ms">
+        <el-card shadow="never" class="panel-card maintenance-status-card">
+          <template #header><div class="card-header-row"><span>文件系统</span><StatusPulse :status="Object.values(status?.filesystem?.paths || {}).every((p: any) => p.exists) ? 'success' : 'warning'" size="sm" /></div></template>
+          <div class="status-line"><span>磁盘剩余</span><strong>{{ formatBytes(status?.filesystem.disk.free) }}</strong></div>
+          <div class="status-line"><span>磁盘总量</span><strong>{{ formatBytes(status?.filesystem.disk.total) }}</strong></div>
+          <div class="maintenance-paths">
+            <div v-for="(item, name) in status?.filesystem.paths || {}" :key="name">
+              <el-tag :type="item.exists && item.is_dir ? 'success' : 'danger'">{{ name }}</el-tag>
+              <span>{{ item.path }}</span>
+            </div>
           </div>
-        </div>
-      </el-card>
+        </el-card>
+      </MotionPanel>
     </section>
 
     <el-card shadow="never" class="panel-card maintenance-actions-panel">
@@ -75,6 +83,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import StatusPulse from '@/components/common/StatusPulse.vue'
+import MotionPanel from '@/components/common/MotionPanel.vue'
 import {
   clearMaintenanceHistory,
   clearMaintenanceLogs,
@@ -171,3 +181,16 @@ function formatBytes(value?: number) {
   return `${(size / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
 }
 </script>
+
+<style scoped>
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.maintenance-status-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+</style>

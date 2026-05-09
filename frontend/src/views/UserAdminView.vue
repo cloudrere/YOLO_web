@@ -1,21 +1,23 @@
 <template>
   <AppLayout>
     <section class="grid">
-      <el-card shadow="never" class="panel-card">
-        <template #header>创建用户</template>
-        <el-form :model="form" label-width="110px">
-          <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-          <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
-          <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
-          <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
-          <el-form-item label="角色">
-            <el-select v-model="form.role_ids" multiple style="width: 100%">
-              <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
-            </el-select>
-          </el-form-item>
-          <el-button type="primary" @click="create">创建用户</el-button>
-        </el-form>
-      </el-card>
+      <MotionPanel effect="glow">
+        <el-card shadow="never" class="panel-card">
+          <template #header>创建用户</template>
+          <el-form :model="form" label-width="110px">
+            <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
+            <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
+            <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
+            <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
+            <el-form-item label="角色">
+              <el-select v-model="form.role_ids" multiple style="width: 100%">
+                <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
+              </el-select>
+            </el-form-item>
+            <el-button type="primary" @click="create">创建用户</el-button>
+          </el-form>
+        </el-card>
+      </MotionPanel>
     </section>
     <el-card shadow="never" class="panel-card">
       <template #header>
@@ -28,11 +30,16 @@
         <el-button type="primary" @click="load">查询</el-button>
       </el-form>
       <div class="table-scroll user-table-shell">
-        <el-table :data="users">
+        <el-table :data="users" row-key="id">
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="username" label="用户名" />
           <el-table-column label="启用" width="100">
-            <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template>
+            <template #default="{ row }">
+              <el-tag :type="row.is_active ? 'success' : 'info'">
+                <StatusPulse :status="row.is_active ? 'success' : 'idle'" size="sm" />
+                {{ row.is_active ? '启用' : '停用' }}
+              </el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="超管" width="100">
             <template #default="{ row }"><el-tag :type="row.is_superuser ? 'danger' : 'info'">{{ row.is_superuser ? '是' : '否' }}</el-tag></template>
@@ -75,6 +82,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import StatusPulse from '@/components/common/StatusPulse.vue'
+import MotionPanel from '@/components/common/MotionPanel.vue'
 import { createUser, deleteUser, listRoles, listUsers, updateUser } from '@/api/admin'
 import type { Role, User } from '@/api/types'
 
@@ -152,3 +161,11 @@ async function remove(id: number) {
 }
 onMounted(load)
 </script>
+
+<style scoped>
+.el-table :deep(.el-tag) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+</style>

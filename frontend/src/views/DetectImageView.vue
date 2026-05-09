@@ -1,64 +1,149 @@
 <template>
   <AppLayout>
-    <section class="detection-status-strip panel-card">
+    <!-- ═══ Hero 横幅 ═══ -->
+    <section class="workstation-hero flex-between">
       <div>
-        <span class="eyebrow dark">单图检测</span>
-        <h2>图片检测与标注预览</h2>
-        <p>上传一张图片，按当前参数生成检测图和目标列表，结果可选择保存到历史记录。</p>
+        <span class="eyebrow dark">视觉检测</span>
+        <h2>单图动态检测工作台</h2>
+        <p>上传一张图片，实时推理生成标注图与结构化检测结果，支持保存到检测历史。</p>
       </div>
       <div class="status-pills">
-        <el-tag type="success">独立页面</el-tag>
-        <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
+        <span class="pulse-dot" :class="loading ? 'running' : result ? 'success' : 'idle'" />
+        <el-tag :type="loading ? 'warning' : result ? 'success' : 'info'" size="large">
+          {{ loading ? '推理中' : result ? '已完成' : '待上传' }}
+        </el-tag>
+        <el-tag :type="params.save_history ? 'success' : ''" size="large">
+          {{ params.save_history ? '同步历史' : '本地检测' }}
+        </el-tag>
       </div>
     </section>
 
-    <section class="detection-workbench single-flow">
-      <aside class="detection-control-rail panel-card">
-        <div class="parameter-panel">
-          <h3>检测参数</h3>
-          <label>置信度：{{ params.confidence.toFixed(2) }}</label>
-          <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" />
-          <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
-          <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" />
-          <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" />
-        </div>
-        <div class="mode-config">
-          <h3>上传图片</h3>
-          <el-upload drag :auto-upload="false" :limit="1" :on-change="selectImage" :on-remove="removeImage">
-            <p>选择一张图片生成标注结果</p>
-          </el-upload>
-          <div class="split-actions">
-            <el-button type="primary" size="large" :disabled="!imageFile || loading" :loading="loading" @click="runImage">开始检测</el-button>
-            <el-button size="large" :disabled="loading || !hasResult" @click="clearResults">清除</el-button>
+    <!-- ═══ 三栏检测工作台 ═══ -->
+    <section class="detection-workbench">
+      <!-- ── 左栏：参数面板 ── -->
+      <aside class="panel-card stagger-container">
+        <div class="panel-section">
+          <h3 class="panel-title">检测参数</h3>
+          <div class="param-row">
+            <label>置信度阈值 <span class="param-value">{{ params.confidence.toFixed(2) }}</span></label>
+            <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
           </div>
-          <p v-if="errorText" class="error-text">{{ errorText }}</p>
+          <div class="param-row">
+            <label>IoU 阈值 <span class="param-value">{{ params.iou.toFixed(2) }}</span></label>
+            <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
+          </div>
+          <div class="param-row switch-row">
+            <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="loading" />
+          </div>
         </div>
+
+        <div class="panel-section">
+          <h3 class="panel-title">上传图片</h3>
+          <el-upload class="upload-area" drag :auto-upload="false" :limit="1" :on-change="selectImage" :on-remove="removeImage" :disabled="loading">
+            <div class="upload-placeholder">
+              <span class="upload-icon">＋</span>
+              <p>拖拽图片到此处或点击选择</p>
+              <small>支持 JPG / PNG / WebP</small>
+            </div>
+          </el-upload>
+        </div>
+
+        <div class="split-actions">
+          <el-button type="primary" size="large" :disabled="!imageFile || loading" :loading="loading" @click="runImage">
+            {{ loading ? '检测中…' : '开始检测' }}
+          </el-button>
+          <el-button size="large" :disabled="loading || !hasResult" @click="clearResults">清除结果</el-button>
+        </div>
+
+        <p v-if="errorText" class="error-text">{{ errorText }}</p>
       </aside>
 
-      <main class="detection-preview-stage panel-card">
-        <div class="preview-header">
-          <div><span>原图 / 检测图</span><strong>{{ result ? '检测完成' : loading ? '检测中' : '等待图片' }}</strong></div>
-          <el-tag :type="loading ? 'warning' : result ? 'success' : 'info'">{{ loading ? '检测中' : result ? '已完成' : '待上传' }}</el-tag>
+      <!-- ── 中栏：检测画布 ── -->
+      <main class="detect-canvas panel-card" :class="{ 'has-image': result?.original_url || result?.result_url }">
+        <!-- 加载态：扫描动画 -->
+        <div v-if="loading" class="scan-overlay">
+          <div class="scan-line" />
         </div>
-        <div class="preview-canvas">
-          <div v-if="result?.original_url || result?.result_url" class="compare-grid">
-            <figure><img v-if="result.original_url" :src="mediaUrl(result.original_url)" alt="原图" /><figcaption>原图</figcaption></figure>
-            <figure><img v-if="result.result_url" :src="mediaUrl(result.result_url)" alt="检测图" /><figcaption>检测图</figcaption></figure>
+        <div v-if="loading" class="canvas-state scanning">
+          <div class="scan-label pulse-glow">正在推理检测中…</div>
+        </div>
+
+        <!-- 结果态：原图 / 检测图对比 -->
+        <div v-else-if="result && (result.original_url || result.result_url)" class="compare-grid">
+          <figure>
+            <img v-if="result.original_url" :src="mediaUrl(result.original_url)" alt="原图" />
+            <figcaption>原图</figcaption>
+          </figure>
+          <figure>
+            <img v-if="result.result_url" :src="mediaUrl(result.result_url)" alt="检测图" />
+            <figcaption>检测图</figcaption>
+          </figure>
+        </div>
+
+        <!-- 空态 -->
+        <div v-else class="canvas-state empty">
+          <div class="empty-icon-box">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" style="opacity:0.25;">
+              <rect x="6" y="6" width="44" height="44" rx="6" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4" />
+              <rect x="16" y="16" width="24" height="16" rx="3" stroke="currentColor" stroke-width="1.5" />
+              <circle cx="28" cy="24" r="5" stroke="currentColor" stroke-width="1.5" />
+              <path d="M16 40l8-8 4 4 8-8 4 4v8H16z" stroke="currentColor" stroke-width="1.5" fill="none" />
+            </svg>
           </div>
-          <el-empty v-else :description="loading ? '正在推理，请稍候' : '上传图片后显示对比图'" />
-        </div>
-        <div class="preview-metrics">
-          <div><strong>{{ result?.results.length ?? 0 }}</strong><span>目标数</span></div>
-          <div><strong>{{ result?.duration_ms ?? 0 }}</strong><span>耗时(ms)</span></div>
-          <div><strong>{{ topClass }}</strong><span>高频类别</span></div>
+          <h3>等待图片上传</h3>
+          <p>选择图片后点击开始检测，标注结果将展示在此区域</p>
         </div>
       </main>
+
+      <!-- ── 右栏：检测结果检视器 ── -->
+      <aside class="panel-card">
+        <div class="panel-section">
+          <h3 class="panel-title">检测概要</h3>
+          <div class="grid three" style="margin-bottom:0;">
+            <div class="metric-card compact">
+              <span class="metric-label">目标总数</span>
+              <span class="metric-value">{{ result?.results.length ?? 0 }}</span>
+            </div>
+            <div class="metric-card compact">
+              <span class="metric-label">耗时(ms)</span>
+              <span class="metric-value">{{ result?.duration_ms ?? 0 }}</span>
+            </div>
+            <div class="metric-card compact">
+              <span class="metric-label">高频类别</span>
+              <span class="metric-value" style="font-size:18px;">{{ topClass }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" v-if="result?.results.length">
+          <h3 class="panel-title">类别标签</h3>
+          <div class="flex-wrap">
+            <el-tag
+              v-for="(item, i) in classTags" :key="i"
+              size="small" type="success"
+            >{{ item.name }} {{ item.count }}</el-tag>
+          </div>
+        </div>
+
+        <div class="panel-section table-scroll" v-if="result?.results.length">
+          <h3 class="panel-title">结构化结果</h3>
+          <DetectionResultTable :results="result.results" />
+        </div>
+
+        <div class="panel-section" v-else-if="!loading">
+          <el-empty description="检测完成后显示结果概览" :image-size="80" />
+        </div>
+      </aside>
     </section>
 
-    <section class="detection-inspector panel-card">
-      <div class="inspector-header">
-        <div><span class="eyebrow dark">结果详情</span><h3>单图结构化结果</h3></div>
-        <el-button :disabled="loading || !hasResult" @click="clearResults">清除结果</el-button>
+    <!-- ═══ 底部：全宽结构化结果表 ═══ -->
+    <section v-if="hasResult" class="panel-card full">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <div>
+          <span class="eyebrow dark">结果详情</span>
+          <h3 style="margin:4px 0 0;">单图结构化检测结果</h3>
+        </div>
+        <el-button :disabled="loading" @click="clearResults">清除结果</el-button>
       </div>
       <DetectionResultTable :results="result?.results || []" />
     </section>
@@ -87,6 +172,13 @@ const topClass = computed(() => {
     return acc
   }, {})
   return Object.values(counts).sort((a, b) => b.count - a.count)[0].label
+})
+const classTags = computed(() => {
+  const rows = result.value?.results || []
+  if (!rows.length) return []
+  const map = new Map<string, number>()
+  rows.forEach(r => { const k = r.class_zh || r.class; map.set(k, (map.get(k) || 0) + 1) })
+  return Array.from(map.entries()).map(([name, count]) => ({ name, count }))
 })
 
 function mediaUrl(path: string) {
@@ -123,3 +215,171 @@ async function clearResults() {
   ElMessage.success('检测结果已清除')
 }
 </script>
+
+<style scoped>
+/* ── Panel internals ── */
+.panel-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--panel-pad);
+}
+
+.panel-section {
+  margin-bottom: 20px;
+}
+.panel-section:last-child {
+  margin-bottom: 0;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.param-row {
+  margin-bottom: 14px;
+}
+.param-row label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.param-row.switch-row {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.param-value {
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--color-primary-soft);
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+/* ── Upload ── */
+.upload-area {
+  width: 100%;
+}
+.upload-placeholder {
+  padding: 8px 0;
+}
+.upload-placeholder .upload-icon {
+  display: block;
+  font-size: 32px;
+  color: var(--color-primary-light);
+  font-weight: 300;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.upload-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-ink);
+}
+.upload-placeholder small {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+/* ── Actions ── */
+.split-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ── Canvas states ── */
+.detect-canvas {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  overflow: hidden;
+}
+.detect-canvas.has-image {
+  border-style: solid;
+  background: #0f172a;
+}
+
+.canvas-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.canvas-state.scanning .scan-label {
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.canvas-state.empty h3 {
+  margin: 12px 0 4px;
+  font-size: 17px;
+  color: var(--color-ink);
+}
+.canvas-state.empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* ── Compare grid tweaks ── */
+.compare-grid {
+  padding: 0;
+  width: 100%;
+}
+.compare-grid figure {
+  margin: 0;
+  text-align: center;
+}
+.compare-grid img {
+  width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Metric compact ── */
+.metric-card.compact {
+  padding: 14px;
+  text-align: center;
+}
+.metric-card.compact .metric-label {
+  font-size: 11px;
+}
+.metric-card.compact .metric-value {
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+/* ── Eyebrow ── */
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  margin-bottom: 2px;
+}
+.eyebrow.dark {
+  color: var(--color-muted);
+}
+</style>

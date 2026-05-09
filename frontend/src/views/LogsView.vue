@@ -25,26 +25,33 @@
         </div>
       </el-form>
       <div class="table-scroll log-table-shell">
-        <el-table :data="rows" @selection-change="handleSelectionChange">
-          <el-table-column type="selection" width="48" />
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column label="级别" width="130">
-            <template #default="{ row }"><el-tag :type="levelTag(row.level)">{{ row.level_zh || row.level }}</el-tag></template>
-          </el-table-column>
-          <el-table-column label="模块" width="150">
-            <template #default="{ row }">{{ row.module_zh || row.module }}<small class="sub-text">{{ row.module }}</small></template>
-          </el-table-column>
-          <el-table-column label="类型" width="160">
-            <template #default="{ row }">{{ row.type_zh || row.type }}<small class="sub-text">{{ row.type }}</small></template>
-          </el-table-column>
-          <el-table-column prop="message" label="消息" min-width="260" />
-          <el-table-column prop="created_at" label="创建时间" width="190" />
-          <el-table-column label="操作" width="100">
-            <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">删除</el-button></template>
-          </el-table-column>
-        </el-table>
+        <TransitionGroup name="list" tag="div">
+          <el-table :key="page" :data="rows" @selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="48" />
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column label="级别" width="130">
+              <template #default="{ row }">
+                <el-tag :type="levelTag(row.level)" effect="dark">
+                  <StatusPulse :status="levelToStatus(row.level)" size="sm" />
+                  {{ row.level_zh || row.level }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="模块" width="150">
+              <template #default="{ row }">{{ row.module_zh || row.module }}<small class="sub-text">{{ row.module }}</small></template>
+            </el-table-column>
+            <el-table-column label="类型" width="160">
+              <template #default="{ row }">{{ row.type_zh || row.type }}<small class="sub-text">{{ row.type }}</small></template>
+            </el-table-column>
+            <el-table-column prop="message" label="消息" min-width="260" />
+            <el-table-column prop="created_at" label="创建时间" width="190" />
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }"><el-button type="danger" size="small" @click="remove(row.id)">删除</el-button></template>
+            </el-table-column>
+          </el-table>
+        </TransitionGroup>
       </div>
-      <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" @current-change="load" />
+      <el-pagination v-model:current-page="page" :total="total" :page-size="pageSize" layout="prev, pager, next, total" background @current-change="load" />
     </el-card>
   </AppLayout>
 </template>
@@ -53,6 +60,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import StatusPulse from '@/components/common/StatusPulse.vue'
 import { deleteLog, deleteLogsBatch, deleteLogsByDate, listLogs, type LogItem } from '@/api/log'
 
 const rows = ref<LogItem[]>([])
@@ -110,5 +118,19 @@ function levelTag(level: string) {
   if (level === 'warning') return 'warning'
   return 'info'
 }
+function levelToStatus(level: string) {
+  if (['error', 'critical'].includes(level)) return 'danger'
+  if (level === 'warning') return 'warning'
+  if (level === 'info') return 'success'
+  return 'idle'
+}
 onMounted(load)
 </script>
+
+<style scoped>
+.el-table :deep(.el-tag) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+</style>

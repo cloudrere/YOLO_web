@@ -1,83 +1,181 @@
 <template>
   <AppLayout>
-    <section class="detection-status-strip panel-card">
+    <!-- ═══ Hero 横幅 ═══ -->
+    <section class="workstation-hero flex-between">
       <div>
-        <span class="eyebrow dark">批量图片检测</span>
-        <h2>多图队列检测</h2>
-        <p>批量任务逐张提交，支持暂停、继续、结束，页面状态独立保存。</p>
+        <span class="eyebrow dark">视觉检测</span>
+        <h2>批量检测流水线</h2>
+        <p>多图队列逐张提交检测，支持暂停、继续与结束，页面状态独立保存。</p>
       </div>
       <div class="status-pills">
-        <el-tag>{{ selectedCount }} 张图片</el-tag>
-        <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
+        <span class="pulse-dot" :class="loading ? (paused ? 'warning' : 'running') : result ? 'success' : 'idle'" />
+        <el-tag :type="loading ? (paused ? 'warning' : '') : result ? 'success' : 'info'" size="large">
+          {{ statusText }}
+        </el-tag>
+        <el-tag size="large">{{ selectedCount }} 张图片</el-tag>
+        <el-tag :type="params.save_history ? 'success' : ''" size="large">
+          {{ params.save_history ? '同步历史' : '本地检测' }}
+        </el-tag>
       </div>
     </section>
 
-    <section class="detection-workbench single-flow">
-      <aside class="detection-control-rail panel-card">
-        <div class="parameter-panel">
-          <h3>检测参数</h3>
-          <label>置信度：{{ params.confidence.toFixed(2) }}</label>
-          <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
-          <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
-          <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
-          <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="loading" />
-        </div>
-        <div class="mode-config">
-          <h3>上传批量图片</h3>
-          <el-upload drag multiple :auto-upload="false" :on-change="collectBatch" :on-remove="collectBatchRemove" :disabled="loading">
-            <p>选择多张图片批量生成标注图</p>
-          </el-upload>
-          <div class="control-note">已选择 {{ selectedCount }} 张图片</div>
-          <el-progress v-if="loading || result" :percentage="progress" :stroke-width="12" />
-          <div class="split-actions three-actions">
-            <el-button type="primary" size="large" :disabled="selectedCount === 0 || loading" @click="runBatch">开始</el-button>
-            <el-button size="large" :disabled="!loading" @click="togglePause">{{ paused ? '继续' : '暂停' }}</el-button>
-            <el-button size="large" type="danger" :disabled="!loading && !result" @click="endBatch">结束</el-button>
+    <!-- ═══ 双栏工作台 ═══ -->
+    <section class="detection-workbench two-col">
+      <!-- ── 左栏：参数面板 ── -->
+      <aside class="panel-card">
+        <div class="panel-section">
+          <h3 class="panel-title">检测参数</h3>
+          <div class="param-row">
+            <label>置信度阈值 <span class="param-value">{{ params.confidence.toFixed(2) }}</span></label>
+            <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
           </div>
-          <p v-if="errorText" class="error-text">{{ errorText }}</p>
+          <div class="param-row">
+            <label>IoU 阈值 <span class="param-value">{{ params.iou.toFixed(2) }}</span></label>
+            <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
+          </div>
+          <div class="param-row switch-row">
+            <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="loading" />
+          </div>
         </div>
+
+        <div class="panel-section">
+          <h3 class="panel-title">上传批量图片</h3>
+          <el-upload class="upload-area" drag multiple :auto-upload="false" :on-change="collectBatch" :on-remove="collectBatchRemove" :disabled="loading">
+            <div class="upload-placeholder">
+              <span class="upload-icon">＋</span>
+              <p>拖拽多张图片或点击选择</p>
+              <small>已选择 {{ selectedCount }} 张</small>
+            </div>
+          </el-upload>
+        </div>
+
+        <!-- 进度条 -->
+        <div v-if="loading || result" class="panel-section">
+          <div class="progress-header flex-between">
+            <span class="progress-label">检测进度</span>
+            <span class="progress-percent">{{ progress }}%</span>
+          </div>
+          <el-progress :percentage="progress" :stroke-width="10" :color="progress === 100 ? 'var(--color-success)' : 'var(--color-primary)'" />
+        </div>
+
+        <!-- 操作按钮行 -->
+        <div class="split-actions three-col">
+          <el-button type="primary" size="large" :disabled="selectedCount === 0 || loading" @click="runBatch">
+            开始检测
+          </el-button>
+          <el-button size="large" :disabled="!loading" @click="togglePause">
+            {{ paused ? '继续' : '暂停' }}
+          </el-button>
+          <el-button size="large" type="danger" :disabled="!loading && !result" @click="endBatch">
+            结束
+          </el-button>
+        </div>
+
+        <p v-if="errorText" class="error-text">{{ errorText }}</p>
       </aside>
 
-      <main class="detection-preview-stage panel-card">
-        <div class="preview-header">
-          <div><span>批量预览</span><strong>{{ previewTitle }}</strong></div>
-          <el-tag :type="loading ? paused ? 'warning' : 'success' : result ? 'success' : 'info'">{{ statusText }}</el-tag>
-        </div>
-        <div class="preview-canvas">
-          <div v-if="result?.items.length" class="batch-preview-wall">
-            <img v-for="item in result.items.slice(0, 6)" :key="item.file_name" :src="mediaUrl(item.result_url)" :alt="item.file_name" />
+      <!-- ── 右栏：队列预览 ── -->
+      <main class="panel-card">
+        <!-- 队列列表（模拟 BatchPipeline） -->
+        <div class="panel-section">
+          <h3 class="panel-title">任务队列</h3>
+          <div v-if="files.length" class="queue-list">
+            <TransitionGroup name="list">
+              <div
+                v-for="(file, i) in files"
+                :key="file.name + i"
+                class="queue-item"
+                :class="!loading ? 'pending' : i < (result?.items?.length ?? 0) ? (result?.items[i]?.status === 'done' ? 'done' : 'failed') : i === (result?.items?.length ?? 0) ? 'running' : 'pending'"
+              >
+                <span class="pulse-dot sm" :class="!loading ? 'idle' : i < (result?.items?.length ?? 0) ? (result?.items[i]?.status === 'done' ? 'success' : 'danger') : i === (result?.items?.length ?? 0) ? (paused ? 'warning' : 'running') : 'idle'" />
+                <span class="queue-filename">{{ file.name }}</span>
+                <el-tag size="small" :type="!loading ? 'info' : i < (result?.items?.length ?? 0) ? (result?.items[i]?.status === 'done' ? 'success' : 'danger') : i === (result?.items?.length ?? 0) ? 'warning' : 'info'">
+                  {{ !loading ? '等待' : i < (result?.items?.length ?? 0) ? (result?.items[i]?.status === 'done' ? '已完成' : '失败') : i === (result?.items?.length ?? 0) ? '检测中' : '等待' }}
+                </el-tag>
+              </div>
+            </TransitionGroup>
           </div>
-          <el-empty v-else :description="loading ? '批量任务处理中' : '批量检测完成后显示缩略图墙'" />
+          <el-empty v-else description="等待添加检测文件" :image-size="64" />
         </div>
-        <div class="preview-metrics">
-          <div><strong>{{ result?.items.length ?? selectedCount }}</strong><span>图片数</span></div>
-          <div><strong>{{ targetCount }}</strong><span>目标数</span></div>
-          <div><strong>{{ progress }}%</strong><span>进度</span></div>
+
+        <!-- 缩略图预览墙 -->
+        <div v-if="result?.items.length" class="panel-section">
+          <h3 class="panel-title">检测预览</h3>
+          <div class="preview-wall">
+            <img
+              v-for="item in result.items.slice(0, 6)"
+              :key="item.file_name"
+              :src="mediaUrl(item.result_url)"
+              :alt="item.file_name"
+              loading="lazy"
+            />
+          </div>
         </div>
+
+        <!-- 进度指标 -->
+        <div class="panel-section">
+          <h3 class="panel-title">进度指标</h3>
+          <div class="grid three" style="margin-bottom:0;">
+            <div class="metric-card compact">
+              <span class="metric-label">图片数</span>
+              <span class="metric-value">{{ result?.items.length ?? selectedCount }}</span>
+            </div>
+            <div class="metric-card compact">
+              <span class="metric-label">目标总数</span>
+              <span class="metric-value">{{ targetCount }}</span>
+            </div>
+            <div class="metric-card compact">
+              <span class="metric-label">完成进度</span>
+              <span class="metric-value">{{ progress }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <el-empty v-if="!files.length && !result" description="批量检测完成后显示队列与预览" :image-size="80" />
       </main>
     </section>
 
-    <section class="detection-inspector panel-card">
-      <div class="inspector-header">
-        <div><span class="eyebrow dark">结果详情</span><h3>批量图片结果</h3></div>
-        <el-button :disabled="loading || !result" @click="clearResults">清除结果</el-button>
+    <!-- ═══ 底部：批量结果网格 ═══ -->
+    <section v-if="result?.items.length" class="panel-card full">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <div>
+          <span class="eyebrow dark">结果详情</span>
+          <h3 style="margin:4px 0 0;">批量图片检测结果</h3>
+        </div>
+        <el-button :disabled="loading" @click="clearResults">清除结果</el-button>
       </div>
-      <div v-if="result" class="batch-result-grid compact-batch-grid">
-        <article v-for="item in result.items" :key="item.file_name" class="batch-result-card">
-          <div class="compare-grid batch-compare">
-            <figure><img v-if="item.original_url" :src="mediaUrl(item.original_url)" :alt="item.file_name" /><figcaption>原图</figcaption></figure>
-            <figure><img v-if="item.result_url" :src="mediaUrl(item.result_url)" :alt="item.file_name" /><figcaption>检测图</figcaption></figure>
+
+      <div class="batch-result-grid">
+        <article
+          v-for="item in result.items"
+          :key="item.file_name"
+          class="batch-result-card"
+        >
+          <div class="compare-grid">
+            <figure>
+              <img v-if="item.original_url" :src="mediaUrl(item.original_url)" :alt="item.file_name" loading="lazy" />
+              <figcaption>原图</figcaption>
+            </figure>
+            <figure>
+              <img v-if="item.result_url" :src="mediaUrl(item.result_url)" :alt="item.file_name" loading="lazy" />
+              <figcaption>检测图</figcaption>
+            </figure>
           </div>
           <div class="batch-card-body">
-            <div class="toolbar">
-              <strong>{{ item.file_name }}</strong>
-              <el-tag :type="item.status === 'done' ? 'success' : 'danger'">{{ item.status === 'done' ? '已完成' : item.status }}</el-tag>
+            <div class="flex-between" style="margin-bottom:8px;">
+              <strong style="font-size:14px;color:var(--color-ink);">{{ item.file_name }}</strong>
+              <el-tag :type="item.status === 'done' ? 'success' : 'danger'" size="small">
+                {{ item.status === 'done' ? '已完成' : item.status }}
+              </el-tag>
             </div>
             <DetectionResultTable :results="item.results" />
           </div>
         </article>
       </div>
-      <el-empty v-else description="批量检测完成后显示每张图片结果" />
+    </section>
+
+    <section v-else-if="!loading" class="panel-card full" style="text-align:center;">
+      <el-empty description="批量检测完成后显示每张图片结果" :image-size="80" />
     </section>
   </AppLayout>
 </template>
@@ -166,3 +264,170 @@ function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
 </script>
+
+<style scoped>
+/* ── Panel internals ── */
+.panel-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--panel-pad);
+}
+
+.panel-section {
+  margin-bottom: 20px;
+}
+.panel-section:last-child {
+  margin-bottom: 0;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.param-row {
+  margin-bottom: 14px;
+}
+.param-row label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.param-row.switch-row {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.param-value {
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--color-primary-soft);
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+/* ── Upload ── */
+.upload-area {
+  width: 100%;
+}
+.upload-placeholder {
+  padding: 8px 0;
+}
+.upload-placeholder .upload-icon {
+  display: block;
+  font-size: 32px;
+  color: var(--color-primary-light);
+  font-weight: 300;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.upload-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-ink);
+}
+.upload-placeholder small {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ── Progress ── */
+.progress-header {
+  margin-bottom: 8px;
+}
+.progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.progress-percent {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* ── Actions ── */
+.split-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.split-actions.three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ── Queue ── */
+.queue-filename {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.pulse-dot.sm {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+}
+
+/* ── Metric compact ── */
+.metric-card.compact {
+  padding: 14px;
+  text-align: center;
+}
+.metric-card.compact .metric-label {
+  font-size: 11px;
+}
+.metric-card.compact .metric-value {
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+/* ── Batch result grid ── */
+.batch-result-grid {
+  display: grid;
+  gap: var(--gap);
+}
+
+.batch-result-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.batch-card-body {
+  padding: 14px 16px;
+}
+
+/* ── Eyebrow ── */
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  margin-bottom: 2px;
+}
+.eyebrow.dark {
+  color: var(--color-muted);
+}
+</style>

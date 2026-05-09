@@ -1,98 +1,176 @@
 <template>
   <AppLayout>
-    <section class="model-command-center panel-card">
-      <div class="model-command-main">
+    <!-- Hero 横幅：当前激活模型 + 4 状态胶囊 -->
+    <div class="workstation-hero">
+      <div style="flex:1;min-width:0;">
         <span class="eyebrow dark">模型控制室</span>
         <h2>{{ active?.active_model?.display_name || active?.active_model?.name || '尚未激活模型' }}</h2>
-        <p>{{ active?.model_path || '请先上传或登记模型，然后选择推理设备并激活。' }}</p>
+        <p style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ active?.model_path || '请先上传或登记模型，然后选择推理设备并激活。' }}</p>
       </div>
-      <div class="model-command-stats">
-        <div><span>当前选择</span><strong>{{ deviceLabel(active?.requested_device || 'auto') }}</strong></div>
-        <div><span>实际运行</span><strong>{{ active?.device || '-' }}</strong></div>
-        <div><span>初始化</span><strong>{{ warmupText }}</strong></div>
-        <div><span>CUDA</span><strong>{{ active?.cuda_available ? active.cuda_name || '可用' : '不可用' }}</strong></div>
+      <div class="model-command-stats" style="display:grid;grid-template-columns:repeat(4,auto);gap:12px;flex-shrink:0;">
+        <div class="metric-card" style="padding:10px 16px;">
+          <span class="metric-label">当前选择</span>
+          <span class="metric-value" style="font-size:20px;">{{ deviceLabel(active?.requested_device || 'auto') }}</span>
+        </div>
+        <div class="metric-card" style="padding:10px 16px;">
+          <span class="metric-label">实际运行</span>
+          <span class="metric-value" style="font-size:20px;">{{ active?.device || '-' }}</span>
+        </div>
+        <div class="metric-card" style="padding:10px 16px;">
+          <span class="metric-label">预热状态</span>
+          <span
+            class="metric-value"
+            style="font-size:20px;"
+            :style="{
+              color:
+                active?.warmup_status === 'cuda_ready' || active?.warmup_status === 'cpu_ready'
+                  ? 'var(--status-success)'
+                  : active?.warmup_status === 'failed'
+                    ? 'var(--status-danger)'
+                    : 'var(--status-warning)',
+            }"
+          >{{ warmupText }}</span>
+        </div>
+        <div class="metric-card" style="padding:10px 16px;">
+          <span class="metric-label">CUDA</span>
+          <span
+            class="metric-value"
+            style="font-size:20px;"
+            :style="{ color: active?.cuda_available ? 'var(--status-success)' : 'var(--color-soft)' }"
+          >{{ active?.cuda_available ? active.cuda_name || '可用' : '不可用' }}</span>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <section class="model-control-layout">
+    <!-- 双栏：设备切换 + 模型导入 -->
+    <section class="grid two" style="margin-bottom:var(--gap);">
+      <!-- 左栏：推理设备切换 -->
       <el-card shadow="never" class="panel-card device-control-panel">
-        <template #header>推理设备切换</template>
-        <div class="device-switcher">
+        <template #header>
+          <span style="font-weight:700;font-size:15px;">推理设备切换</span>
+        </template>
+        <div class="device-switcher flex-wrap" style="gap:8px;margin-bottom:14px;">
           <el-button
             v-for="option in displayDeviceOptions"
             :key="option.value"
             :type="selectedDevice === option.value ? 'primary' : 'default'"
             :disabled="!option.available || switchingDevice || !canManageModel"
             @click="selectedDevice = option.value"
+            size="large"
           >
             {{ option.label }}
           </el-button>
         </div>
-        <div class="device-detail-card" :class="selectedDevice.startsWith('cuda') ? 'gpu' : selectedDevice === 'cpu' ? 'cpu' : 'auto'">
-          <strong>{{ deviceLabel(selectedDevice) }}</strong>
-          <span>{{ selectedDeviceDescription }}</span>
-          <small v-if="selectedDeviceDetail">{{ selectedDeviceDetail }}</small>
+        <div
+          class="device-detail-card"
+          :class="selectedDevice.startsWith('cuda') ? 'gpu' : selectedDevice === 'cpu' ? 'cpu' : 'auto'"
+          style="padding:16px;border-radius:var(--radius-md);margin-bottom:14px;"
+          :style="{
+            background: selectedDevice.startsWith('cuda') ? 'rgba(22,163,74,0.06)' : selectedDevice === 'cpu' ? 'rgba(217,119,6,0.06)' : 'rgba(37,99,235,0.05)',
+            border: selectedDevice.startsWith('cuda') ? '1px solid rgba(22,163,74,0.2)' : selectedDevice === 'cpu' ? '1px solid rgba(217,119,6,0.2)' : '1px solid rgba(37,99,235,0.15)',
+          }"
+        >
+          <strong style="display:block;font-size:16px;color:var(--color-ink);margin-bottom:4px;">{{ deviceLabel(selectedDevice) }}</strong>
+          <span style="display:block;font-size:13px;color:var(--color-muted);margin-bottom:4px;">{{ selectedDeviceDescription }}</span>
+          <small v-if="selectedDeviceDetail" style="color:var(--color-soft);font-size:12px;">{{ selectedDeviceDetail }}</small>
         </div>
-        <el-button class="full" type="primary" :loading="switchingDevice" :disabled="!active?.active_model || !canManageModel" @click="switchDevice">
+        <el-button class="full" type="primary" size="large" :loading="switchingDevice" :disabled="!active?.active_model || !canManageModel" @click="switchDevice">
           切换并预热
         </el-button>
-        <p v-if="active?.warmup_error" class="error-text">{{ active.warmup_error }}</p>
+        <p v-if="active?.warmup_error" class="error-text" style="margin:12px 0 0;">{{ active.warmup_error }}</p>
       </el-card>
 
+      <!-- 右栏：导入模型 -->
       <el-card shadow="never" class="panel-card model-register-card compact-form-card">
-        <template #header>导入模型</template>
-        <el-form :model="form" label-position="top">
-          <el-form-item label="模型名称" required><el-input v-model="form.name" placeholder="输入模型显示名称" /></el-form-item>
-          <el-form-item label="模型路径" required><el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" /></el-form-item>
-          <el-form-item label="版本号" required><el-input v-model="form.version" placeholder="输入版本标识" /></el-form-item>
-          <div class="form-actions">
-            <el-button type="primary" :disabled="!canManageModel || !canRegisterModel" @click="register">登记路径</el-button>
-          </div>
+        <template #header>
+          <span style="font-weight:700;font-size:15px;">导入模型</span>
+        </template>
+        <el-form :model="form" label-position="top" style="margin-bottom:16px;">
+          <el-form-item label="模型名称" required>
+            <el-input v-model="form.name" placeholder="输入模型显示名称" />
+          </el-form-item>
+          <el-form-item label="模型路径" required>
+            <el-input v-model="form.path" placeholder="绝对路径或 storage/models 下的文件名" />
+          </el-form-item>
+          <el-form-item label="版本号" required>
+            <el-input v-model="form.version" placeholder="输入版本标识" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :disabled="!canManageModel || !canRegisterModel" @click="register" style="width:100%;">
+              登记路径
+            </el-button>
+          </el-form-item>
         </el-form>
-        <div class="model-upload-zone">
-          <el-upload :auto-upload="false" :limit="1" :on-change="selectUploadModel">
-            <el-button>选择 .pt 文件</el-button>
-          </el-upload>
-          <el-button type="primary" :disabled="!uploadFileRef" @click="upload">上传模型</el-button>
+        <div class="model-upload-zone" style="padding:16px;border-radius:var(--radius-md);background:var(--color-bg);border:1px dashed var(--color-border);">
+          <p style="margin:0 0 12px;font-size:13px;color:var(--color-muted);">上传 .pt 模型文件</p>
+          <div class="flex-wrap" style="gap:8px;">
+            <el-upload :auto-upload="false" :limit="1" :on-change="selectUploadModel">
+              <el-button>选择 .pt 文件</el-button>
+            </el-upload>
+            <el-button type="primary" :disabled="!uploadFileRef || !canManageModel" @click="upload">上传模型</el-button>
+          </div>
         </div>
       </el-card>
     </section>
 
+    <!-- 模型库表格 -->
     <el-card shadow="never" class="panel-card model-library-panel">
       <template #header>
-        <div class="toolbar"><span>模型库</span><el-button @click="load">刷新</el-button></div>
+        <div class="flex-between">
+          <span style="font-weight:700;font-size:15px;">模型库</span>
+          <el-button @click="load" :icon="'Refresh'">刷新</el-button>
+        </div>
       </template>
       <div class="table-scroll model-table-shell">
-        <el-table :data="models" class="model-table">
-          <el-table-column label="序号" width="80">
+        <el-table :data="models" class="model-table" empty-text="暂无已登记模型">
+          <el-table-column label="#" width="60" align="center">
             <template #default="{ $index }">{{ $index + 1 }}</template>
           </el-table-column>
           <el-table-column prop="display_name" label="显示名称" min-width="150">
-            <template #default="{ row }">{{ row.display_name || row.name }}</template>
+            <template #default="{ row }">
+              <span style="font-weight:600;">{{ row.display_name || row.name }}</span>
+            </template>
           </el-table-column>
           <el-table-column prop="name" label="后端名称" min-width="140" />
-          <el-table-column prop="version" label="版本" width="120" />
-          <el-table-column prop="device" label="上次选择" width="130">
-            <template #default="{ row }"><el-tag :type="row.device?.startsWith('cuda') ? 'success' : row.device === 'cpu' ? 'warning' : 'info'">{{ deviceLabel(row.device || 'auto') }}</el-tag></template>
+          <el-table-column prop="version" label="版本" width="110">
+            <template #default="{ row }">
+              <el-tag size="small" type="info">{{ row.version }}</el-tag>
+            </template>
           </el-table-column>
-          <el-table-column prop="is_active" label="状态" width="110">
-            <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '运行中' : '未激活' }}</el-tag></template>
+          <el-table-column prop="device" label="上次选择" width="120">
+            <template #default="{ row }">
+              <el-tag
+                :type="row.device?.startsWith('cuda') ? 'success' : row.device === 'cpu' ? 'warning' : 'info'"
+                size="small"
+              >
+                {{ deviceLabel(row.device || 'auto') }}
+              </el-tag>
+            </template>
           </el-table-column>
-          <el-table-column prop="path" label="路径" min-width="260">
+          <el-table-column prop="is_active" label="激活状态" width="110" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
+                {{ row.is_active ? '运行中' : '未激活' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="path" label="模型路径" min-width="260">
             <template #default="{ row }">
               <el-tooltip :content="row.path" placement="top">
-                <span class="model-path-text">{{ row.path }}</span>
+                <span style="font-size:12px;font-family:var(--font-mono);color:var(--color-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;max-width:280px;">{{ row.path }}</span>
               </el-tooltip>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="360" fixed="right">
             <template #default="{ row }">
-              <div class="form-actions table-actions wrap-actions">
-                <el-button v-if="canManageModel" type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
-                <el-button v-if="canManageModel" size="small" @click="openDisplayName(row)">改名</el-button>
-                <el-button v-if="canManageModel" size="small" @click="openMapping(row)">类别映射</el-button>
-                <el-button v-if="canManageModel" type="danger" size="small" :disabled="row.is_active" @click="remove(row.id)">删除</el-button>
-                <el-tag v-else type="info">仅查看</el-tag>
+              <div class="flex-wrap" style="gap:6px;">
+                <template v-if="canManageModel">
+                  <el-button type="primary" size="small" :loading="activatingId === row.id" @click="activate(row.id)">激活</el-button>
+                  <el-button size="small" @click="openDisplayName(row)">改名</el-button>
+                  <el-button size="small" @click="openMapping(row)">类别映射</el-button>
+                  <el-button type="danger" size="small" :disabled="row.is_active" @click="remove(row.id)">删除</el-button>
+                </template>
+                <el-tag v-else type="info" size="small">仅查看</el-tag>
               </div>
             </template>
           </el-table-column>
@@ -100,24 +178,28 @@
       </div>
     </el-card>
 
+    <!-- 修改显示名称对话框 -->
     <el-dialog v-model="displayDialog" title="修改模型显示名称" width="420px">
-      <el-input v-model="displayNameForm" placeholder="请输入前端显示名称" />
+      <el-input v-model="displayNameForm" placeholder="请输入前端显示名称" size="large" />
       <template #footer>
         <el-button @click="displayDialog = false">取消</el-button>
         <el-button type="primary" @click="saveDisplayName">保存</el-button>
       </template>
     </el-dialog>
 
+    <!-- 类别映射抽屉 -->
     <el-drawer v-model="mappingDrawer" title="类别中英文对照" size="54%">
-      <div class="mapping-toolbar">
-        <span>模型：{{ selectedModel?.display_name || selectedModel?.name }}</span>
+      <div class="mapping-toolbar flex-between" style="margin-bottom:16px;">
+        <span style="font-weight:600;color:var(--color-ink);">模型：{{ selectedModel?.display_name || selectedModel?.name }}</span>
         <el-button type="primary" @click="saveMapping">保存映射</el-button>
       </div>
       <div class="table-scroll">
-        <el-table :data="mappingRows">
+        <el-table :data="mappingRows" empty-text="暂无类别数据">
           <el-table-column prop="class_name" label="英文类别" min-width="160" />
           <el-table-column label="中文名称" min-width="220">
-            <template #default="{ row }"><el-input v-model="row.class_zh" /></template>
+            <template #default="{ row }">
+              <el-input v-model="row.class_zh" placeholder="输入中文名称" />
+            </template>
           </el-table-column>
         </el-table>
       </div>
