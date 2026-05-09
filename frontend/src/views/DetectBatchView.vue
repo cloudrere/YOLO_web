@@ -1,84 +1,94 @@
 <template>
   <AppLayout>
-    <section class="detection-status-strip panel-card">
+    <div class="ws-page-header">
       <div>
-        <span class="eyebrow dark">批量图片检测</span>
-        <h2>多图队列检测</h2>
-        <p>批量任务逐张提交，支持暂停、继续、结束，页面状态独立保存。</p>
+        <h1>批量样本处理台</h1>
+        <p>多图队列逐张检测，支持暂停/继续/结束，实时进度反馈。</p>
       </div>
-      <div class="status-pills">
-        <el-tag>{{ selectedCount }} 张图片</el-tag>
-        <el-tag :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '上传到历史记录' : '仅本地检测' }}</el-tag>
+      <div class="ws-tags">
+        <el-tag size="small">{{ selectedCount }} 张图片</el-tag>
+        <el-tag size="small" :type="params.save_history ? 'success' : 'warning'">{{ params.save_history ? '保存历史' : '仅本地' }}</el-tag>
       </div>
-    </section>
+    </div>
 
-    <section class="detection-workbench single-flow">
-      <aside class="detection-control-rail panel-card">
-        <div class="parameter-panel">
-          <h3>检测参数</h3>
-          <label>置信度：{{ params.confidence.toFixed(2) }}</label>
+    <div class="ws-panel-2">
+      <!-- 队列控制面板 -->
+      <div class="ws-tool-panel">
+        <div class="panel-label">检测参数</div>
+        <div class="ws-param-group">
+          <label>置信度 <span>{{ params.confidence.toFixed(2) }}</span></label>
           <el-slider v-model="params.confidence" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
-          <label>IoU 阈值：{{ params.iou.toFixed(2) }}</label>
+        </div>
+        <div class="ws-param-group">
+          <label>IoU 阈值 <span>{{ params.iou.toFixed(2) }}</span></label>
           <el-slider v-model="params.iou" :min="0.05" :max="0.95" :step="0.01" :disabled="loading" />
-          <el-switch v-model="params.save_history" active-text="上传到历史记录" inactive-text="仅本地检测" :disabled="loading" />
         </div>
-        <div class="mode-config">
-          <h3>上传批量图片</h3>
-          <el-upload drag multiple :auto-upload="false" :on-change="collectBatch" :on-remove="collectBatchRemove" :disabled="loading">
-            <p>选择多张图片批量生成标注图</p>
-          </el-upload>
-          <div class="control-note">已选择 {{ selectedCount }} 张图片</div>
-          <el-progress v-if="loading || result" :percentage="progress" :stroke-width="12" />
-          <div class="split-actions three-actions">
-            <el-button type="primary" size="large" :disabled="selectedCount === 0 || loading" @click="runBatch">开始</el-button>
-            <el-button size="large" :disabled="!loading" @click="togglePause">{{ paused ? '继续' : '暂停' }}</el-button>
-            <el-button size="large" type="danger" :disabled="!loading && !result" @click="endBatch">结束</el-button>
-          </div>
-          <p v-if="errorText" class="error-text">{{ errorText }}</p>
+        <div class="ws-param-group">
+          <el-switch v-model="params.save_history" active-text="保存历史" inactive-text="仅本地" :disabled="loading" />
         </div>
-      </aside>
-
-      <main class="detection-preview-stage panel-card">
-        <div class="preview-header">
-          <div><span>批量预览</span><strong>{{ previewTitle }}</strong></div>
-          <el-tag :type="loading ? paused ? 'warning' : 'success' : result ? 'success' : 'info'">{{ statusText }}</el-tag>
+        <div class="ws-tool-divider"></div>
+        <div class="panel-label">样本队列</div>
+        <el-upload drag multiple :auto-upload="false" :on-change="collectBatch" :on-remove="collectBatchRemove" :disabled="loading">
+          <p>选择多张图片</p>
+        </el-upload>
+        <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">已选择 {{ selectedCount }} 张</div>
+        <el-progress v-if="loading || result" :percentage="progress" :stroke-width="6" class="ws-progress" />
+        <div class="flex-gap" style="margin-top:8px">
+          <el-button type="primary" :disabled="selectedCount === 0 || loading" @click="runBatch">开始</el-button>
+          <el-button :disabled="!loading" @click="togglePause">{{ paused ? '继续' : '暂停' }}</el-button>
+          <el-button type="danger" :disabled="!loading && !result" @click="endBatch">结束</el-button>
         </div>
-        <div class="preview-canvas">
-          <div v-if="result?.items.length" class="batch-preview-wall">
-            <img v-for="item in result.items.slice(0, 6)" :key="item.file_name" :src="mediaUrl(item.result_url)" :alt="item.file_name" />
-          </div>
-          <el-empty v-else :description="loading ? '批量任务处理中' : '批量检测完成后显示缩略图墙'" />
-        </div>
-        <div class="preview-metrics">
-          <div><strong>{{ result?.items.length ?? selectedCount }}</strong><span>图片数</span></div>
-          <div><strong>{{ targetCount }}</strong><span>目标数</span></div>
-          <div><strong>{{ progress }}%</strong><span>进度</span></div>
-        </div>
-      </main>
-    </section>
-
-    <section class="detection-inspector panel-card">
-      <div class="inspector-header">
-        <div><span class="eyebrow dark">结果详情</span><h3>批量图片结果</h3></div>
-        <el-button :disabled="loading || !result" @click="clearResults">清除结果</el-button>
+        <p v-if="errorText" class="text-danger" style="margin-top:8px">{{ errorText }}</p>
       </div>
-      <div v-if="result" class="batch-result-grid compact-batch-grid">
-        <article v-for="item in result.items" :key="item.file_name" class="batch-result-card">
-          <div class="compare-grid batch-compare">
-            <figure><img v-if="item.original_url" :src="mediaUrl(item.original_url)" :alt="item.file_name" /><figcaption>原图</figcaption></figure>
-            <figure><img v-if="item.result_url" :src="mediaUrl(item.result_url)" :alt="item.file_name" /><figcaption>检测图</figcaption></figure>
+
+      <!-- 预览与结果 -->
+      <div>
+        <div class="ws-preview-stage" style="margin-bottom:10px">
+          <div class="ws-preview-header">
+            <span>{{ previewTitle }}</span>
+            <el-tag size="small" :type="loading ? (paused ? 'warning' : 'success') : result ? 'success' : 'info'">{{ statusText }}</el-tag>
           </div>
-          <div class="batch-card-body">
-            <div class="toolbar">
-              <strong>{{ item.file_name }}</strong>
-              <el-tag :type="item.status === 'done' ? 'success' : 'danger'">{{ item.status === 'done' ? '已完成' : item.status }}</el-tag>
+          <div class="ws-preview-canvas" style="aspect-ratio:auto;min-height:180px">
+            <div v-if="result?.items.length" class="ws-thumb-grid" style="padding:10px">
+              <img v-for="item in result.items.slice(0, 12)" :key="item.file_name" :src="mediaUrl(item.result_url)" :alt="item.file_name" />
             </div>
-            <DetectionResultTable :results="item.results" />
+            <span v-else style="color:var(--text-muted);font-size:13px">{{ loading ? '处理中…' : '完成后显示缩略图' }}</span>
           </div>
-        </article>
+          <div class="ws-preview-footer">
+            <div class="foot-stat"><span class="stat-num">{{ result?.items.length ?? selectedCount }}</span><span class="stat-label">图片数</span></div>
+            <div class="foot-stat"><span class="stat-num">{{ targetCount }}</span><span class="stat-label">目标数</span></div>
+            <div class="foot-stat"><span class="stat-num">{{ progress }}%</span><span class="stat-label">进度</span></div>
+          </div>
+        </div>
+
+        <div class="ws-card" v-if="result?.items.length">
+          <div class="ws-card-header">
+            <span>处理结果</span>
+            <el-button size="small" :disabled="loading" @click="clearResults">清除</el-button>
+          </div>
+          <div class="ws-card-body">
+            <div class="ws-result-grid">
+              <div v-for="item in result.items" :key="item.file_name" class="ws-batch-card">
+                <div class="batch-header">
+                  <strong style="font-size:11px">{{ item.file_name }}</strong>
+                  <el-tag size="small" :type="item.status === 'done' ? 'success' : 'danger'">{{ item.status === 'done' ? 'OK' : item.status }}</el-tag>
+                </div>
+                <div class="compare-split" style="aspect-ratio:2/1;background:#000;display:grid;grid-template-columns:1fr 1fr">
+                  <img v-if="item.original_url" :src="mediaUrl(item.original_url)" :alt="item.file_name" style="width:100%;height:100%;object-fit:contain" />
+                  <img v-if="item.result_url" :src="mediaUrl(item.result_url)" :alt="item.file_name" style="width:100%;height:100%;object-fit:contain;border-left:1px solid rgba(255,255,255,0.1)" />
+                </div>
+                <div style="padding:6px 8px;font-size:11px">
+                  <div v-for="(r, i) in item.results" :key="i" class="ws-detection-row">
+                    <span class="det-class">{{ r.class_zh || r.class }}</span>
+                    <span class="det-conf">{{ (r.confidence * 100).toFixed(1) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <el-empty v-else description="批量检测完成后显示每张图片结果" />
-    </section>
+    </div>
   </AppLayout>
 </template>
 
@@ -86,7 +96,6 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import DetectionResultTable from '@/components/detection/DetectionResultTable.vue'
 import { apiMediaUrl, detectBatch, type BatchDetectResult } from '@/api/detect'
 
 const files = ref<File[]>([])
@@ -99,70 +108,27 @@ const errorText = ref('')
 const params = reactive({ confidence: 0.25, iou: 0.7, save_history: true })
 const selectedCount = computed(() => files.value.length)
 const targetCount = computed(() => result.value?.items.reduce((sum, item) => sum + item.results.length, 0) ?? 0)
-const statusText = computed(() => (loading.value ? (paused.value ? '已暂停' : '检测中') : result.value ? '已完成' : '待上传'))
-const previewTitle = computed(() => (result.value ? `${result.value.items.length} 张图片` : loading.value ? '批量处理中' : '等待批量任务'))
+const statusText = computed(() => (loading.value ? (paused.value ? '已暂停' : '处理中') : result.value ? '已完成' : '待上传'))
+const previewTitle = computed(() => (result.value ? `${result.value.items.length} 张` : loading.value ? '处理中' : '等待任务'))
 
-function mediaUrl(path: string) {
-  return apiMediaUrl(path)
-}
-function collectBatch(_: UploadFile, uploadFiles: UploadFile[]) {
-  files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[]
-}
-function collectBatchRemove(_: UploadFile, uploadFiles: UploadFile[]) {
-  files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[]
-}
+function mediaUrl(path: string) { return apiMediaUrl(path) }
+function collectBatch(_: UploadFile, uploadFiles: UploadFile[]) { files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[] }
+function collectBatchRemove(_: UploadFile, uploadFiles: UploadFile[]) { files.value = uploadFiles.map((item) => item.raw).filter(Boolean) as File[] }
 async function runBatch() {
   if (!files.value.length) return
-  loading.value = true
-  paused.value = false
-  ended.value = false
-  errorText.value = ''
-  result.value = { items: [], parameters: { ...params } }
-  progress.value = 0
+  loading.value = true; paused.value = false; ended.value = false; errorText.value = ''; result.value = { items: [], parameters: { ...params } }; progress.value = 0
   try {
     for (let index = 0; index < files.value.length; index += 1) {
       if (ended.value) break
       while (paused.value && !ended.value) await wait(200)
       const itemResult = await detectBatch([files.value[index]], { ...params })
-      result.value.items.push(...itemResult.items)
-      progress.value = Math.round(((index + 1) / files.value.length) * 100)
+      result.value.items.push(...itemResult.items); progress.value = Math.round(((index + 1) / files.value.length) * 100)
     }
-  } catch (error: any) {
-    errorText.value = error?.message || '批量检测失败'
-    ElMessage.error(errorText.value)
-  } finally {
-    loading.value = false
-    if (!ended.value && !errorText.value) ElMessage.success('批量检测已完成')
-  }
+  } catch (error: any) { errorText.value = error?.message || '批量检测失败'; ElMessage.error(errorText.value) }
+  finally { loading.value = false; if (!ended.value && !errorText.value) ElMessage.success('批量检测已完成') }
 }
-function togglePause() {
-  paused.value = !paused.value
-  ElMessage.info(paused.value ? '批量检测已暂停' : '批量检测已继续')
-}
-async function endBatch() {
-  try {
-    await ElMessageBox.confirm('确认结束当前批量检测任务吗？未处理的图片将不再继续检测。', '结束确认', { type: 'warning', confirmButtonText: '确认结束', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  ended.value = true
-  paused.value = false
-  loading.value = false
-  ElMessage.warning('批量检测已结束')
-}
-async function clearResults() {
-  try {
-    await ElMessageBox.confirm('确认清除当前批量检测结果吗？', '清除确认', { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' })
-  } catch {
-    return
-  }
-  result.value = null
-  progress.value = 0
-  ended.value = true
-  errorText.value = ''
-  ElMessage.success('批量检测结果已清除')
-}
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
+function togglePause() { paused.value = !paused.value; ElMessage.info(paused.value ? '已暂停' : '已继续') }
+async function endBatch() { try { await ElMessageBox.confirm('确认结束当前批量任务？未处理的图片不再检测。', '结束确认', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }) } catch { return }; ended.value = true; paused.value = false; loading.value = false; ElMessage.warning('批量检测已结束') }
+async function clearResults() { try { await ElMessageBox.confirm('确认清除当前批量检测结果吗？', '清除确认', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }) } catch { return }; result.value = null; progress.value = 0; ended.value = true; errorText.value = ''; ElMessage.success('结果已清除') }
+function wait(ms: number) { return new Promise((resolve) => window.setTimeout(resolve, ms)) }
 </script>
