@@ -1,24 +1,31 @@
 <template>
   <AppLayout>
-    <div class="ws-page-header">
+    <section class="detect-home-hero">
       <div>
-        <h1>选择检测工作流</h1>
-        <p>四种检测模式独立页面，参数、任务、预览和结果互不串扰。</p>
+        <span class="eyebrow dark">检测工作区</span>
+        <h2>选择检测模式</h2>
+        <p>四种检测模式提供独立的工作区，参数、任务和结果互不干扰。选择最适合你当前任务的模式开始工作。</p>
       </div>
-      <el-tag size="small" type="success">独立状态</el-tag>
-    </div>
+      <div class="detect-status-sidebar">
+        <div class="detect-home-status">
+          <div><span>可用模式</span><strong>4 种</strong></div>
+          <div><span>独立工作区</span><strong>隔离运行</strong></div>
+          <div><span>当前模型</span><strong>本地推理</strong></div>
+        </div>
+      </div>
+    </section>
 
-    <div class="ws-mode-grid">
-      <RouterLink v-for="item in modes" :key="item.path" :to="item.path" class="ws-mode-card">
-        <span class="mode-kicker">{{ item.kicker }}</span>
+    <section class="detect-mode-grid">
+      <RouterLink v-for="item in modes" :key="item.path" :to="item.path" class="detect-mode-card">
+        <div class="detect-mode-icon">{{ item.icon }}</div>
         <h3>{{ item.title }}</h3>
         <p>{{ item.description }}</p>
-        <div class="mode-foot">
+        <div class="mode-card-footer">
           <el-tag size="small">{{ item.tag }}</el-tag>
-          <span style="font-size:12px;color:var(--accent);font-weight:600">进入 →</span>
+          <span>进入 →</span>
         </div>
       </RouterLink>
-    </div>
+    </section>
   </AppLayout>
 </template>
 
@@ -27,9 +34,32 @@ import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const modes = [
-  { path: '/detect/image', kicker: 'IMAGE', title: '单图检测', description: '上传一张图片，参数调节 → 查看原图/检测图/目标表。', tag: '快速验证' },
-  { path: '/detect/batch', kicker: 'BATCH', title: '批量图片检测', description: '多张图片逐张处理，支持暂停、继续、结束和进度反馈。', tag: '批量任务' },
-  { path: '/detect/video', kicker: 'VIDEO', title: '视频文件检测', description: '上传视频创建异步任务，查看帧流、进度和检测结果。', tag: '异步抽帧' },
-  { path: '/detect/realtime', kicker: 'LIVE', title: '实时视频流检测', description: '连接摄像头或 RTSP/HTTP 流，实时显示 YOLO 标注画面。', tag: 'MJPEG 实时' },
+  { path: '/detect/image', icon: '🖼', title: '单图检测', description: '上传单张图片进行目标检测，对比原图与标注结果，查看结构化检测数据。', tag: '快速验证' },
+  { path: '/detect/batch', icon: '📦', title: '批量检测', description: '多张图片队列处理，支持暂停继续和结束控制，逐张返回检测结果。', tag: '批量任务' },
+  { path: '/detect/video', icon: '🎬', title: '视频检测', description: '上传视频文件创建异步任务，实时查看标注帧流和检测进度。', tag: '异步抽帧' },
+  { path: '/detect/realtime', icon: '📡', title: '实时流检测', description: '连接摄像头或 RTSP/HTTP 流媒体，实时显示 YOLO 标注画面。', tag: 'MJPEG 实时' },
 ]
 </script>
+
+<style scoped>
+.detect-status-sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.detect-home-status {
+  display: grid;
+  gap: 10px;
+}
+
+.detect-home-status div {
+  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.detect-home-status span { display: block; color: var(--color-muted); font-size: 11px; }
+.detect-home-status strong { display: block; margin-top: 4px; color: var(--color-primary-deep); font-size: 16px; }
+</style>
