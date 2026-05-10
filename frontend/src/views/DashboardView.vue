@@ -414,14 +414,36 @@ function formatBytes(value?: number | null) {
 
 <style scoped>
 /* Hero 横幅增强 */
+.workstation-hero {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+  border: 1px solid #bfdbfe;
+  position: relative;
+  overflow: hidden;
+}
+
+.workstation-hero::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
 .hero-info .hero-eyebrow {
-  display: block;
+  display: inline-block;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--color-primary);
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .hero-stat {
@@ -440,6 +462,29 @@ function formatBytes(value?: number | null) {
 
 .hero-actions {
   flex-shrink: 0;
+}
+
+/* 指标卡片增强 */
+.metric-card {
+  position: relative;
+  transition: transform var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+
+.metric-card:hover::before {
+  opacity: 1;
 }
 
 /* 指标单位 */
@@ -491,6 +536,11 @@ function formatBytes(value?: number | null) {
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
+  transition: border-color var(--motion-fast);
+}
+
+.gpu-device-card:hover {
+  border-color: var(--color-primary-light);
 }
 
 .gpu-device-card strong {
@@ -527,6 +577,13 @@ function formatBytes(value?: number | null) {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--motion-fast);
+}
+
+.top-class-item:hover {
+  background: var(--color-bg);
 }
 
 .class-name {

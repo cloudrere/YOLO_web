@@ -1,24 +1,24 @@
 <template>
   <AppLayout>
-    <section class="grid">
-      <MotionPanel effect="glow">
-        <el-card shadow="never" class="panel-card">
-          <template #header>创建用户</template>
-          <el-form :model="form" label-width="110px">
-            <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-            <el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item>
-            <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
-            <el-form-item label="超级管理员"><el-switch v-model="form.is_superuser" /></el-form-item>
-            <el-form-item label="角色">
-              <el-select v-model="form.role_ids" multiple style="width: 100%">
-                <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
-              </el-select>
-            </el-form-item>
-            <el-button type="primary" @click="create">创建用户</el-button>
-          </el-form>
-        </el-card>
-      </MotionPanel>
-    </section>
+    <el-card shadow="never" class="panel-card create-user-card">
+      <template #header>
+        <div class="toolbar"><span>创建用户</span></div>
+      </template>
+      <el-form :model="form" :inline="true" class="create-user-form">
+        <el-form-item label="用户名"><el-input v-model="form.username" placeholder="输入用户名" /></el-form-item>
+        <el-form-item label="密码"><el-input v-model="form.password" type="password" placeholder="输入密码" /></el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="form.role_ids" multiple placeholder="选择角色" style="width: 200px">
+            <el-option v-for="role in roles" :key="role.id" :label="roleLabel(role)" :value="role.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
+        <el-form-item label="超管"><el-switch v-model="form.is_superuser" /></el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="create">创建用户</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
     <el-card shadow="never" class="panel-card">
       <template #header>
         <div class="toolbar"><span>用户列表</span><el-button @click="load">刷新</el-button></div>
@@ -83,7 +83,6 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import StatusPulse from '@/components/common/StatusPulse.vue'
-import MotionPanel from '@/components/common/MotionPanel.vue'
 import { createUser, deleteUser, listRoles, listUsers, updateUser } from '@/api/admin'
 import type { Role, User } from '@/api/types'
 
@@ -163,6 +162,21 @@ onMounted(load)
 </script>
 
 <style scoped>
+.create-user-card {
+  margin-bottom: var(--gap);
+}
+
+.create-user-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 12px;
+}
+
+.create-user-form .el-form-item {
+  margin-bottom: 0;
+}
+
 .el-table :deep(.el-tag) {
   display: inline-flex;
   align-items: center;

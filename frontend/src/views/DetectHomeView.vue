@@ -120,16 +120,35 @@ const modes = [
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+  border: 1px solid #bfdbfe;
+  position: relative;
+  overflow: hidden;
+}
+
+.detect-hero::before {
+  content: "";
+  position: absolute;
+  bottom: -60%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .hero-info .hero-eyebrow {
-  display: block;
+  display: inline-block;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--color-primary);
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .hero-model {
@@ -147,6 +166,15 @@ const modes = [
   color: inherit;
   position: relative;
   z-index: 1;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: all var(--motion-normal) var(--ease-standard);
+}
+
+.mode-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 .mode-icon {
@@ -155,9 +183,23 @@ const modes = [
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   margin-bottom: 16px;
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
+
+.mode-card:hover .mode-icon {
+  transform: scale(1.08);
+}
+
+.mode-card:nth-child(1) .mode-icon { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.mode-card:nth-child(2) .mode-icon { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.mode-card:nth-child(3) .mode-icon { background: linear-gradient(135deg, #ea580c, #c2410c); }
+.mode-card:nth-child(4) .mode-icon { background: linear-gradient(135deg, #0891b2, #0e7490); }
+
+.mode-card:nth-child(1):hover { border-color: rgba(37, 99, 235, 0.4); }
+.mode-card:nth-child(2):hover { border-color: rgba(124, 58, 237, 0.4); }
+.mode-card:nth-child(3):hover { border-color: rgba(234, 88, 12, 0.4); }
+.mode-card:nth-child(4):hover { border-color: rgba(8, 145, 178, 0.4); }
 
 .mode-emoji {
   font-size: 22px;
@@ -205,7 +247,7 @@ const modes = [
 }
 
 .mode-card:hover .mode-arrow {
-  transform: translateX(3px);
+  transform: translateX(4px);
 }
 
 /* 系统就绪状态面板 */
@@ -236,6 +278,12 @@ const modes = [
   border-radius: var(--radius-md);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.readiness-item:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
 }
 
 .readiness-label {

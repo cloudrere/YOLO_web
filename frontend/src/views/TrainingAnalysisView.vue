@@ -12,54 +12,52 @@
       </div>
     </section>
 
-    <section class="training-workbench">
+    <section class="training-upload-row">
       <el-card shadow="never" class="upload-card training-control-panel">
         <template #header>训练数据</template>
-        <el-upload drag accept=".csv" :auto-upload="false" :limit="1" :on-change="selectCsv" :on-remove="removeCsv">
-          <p>拖拽或选择 YOLO results.csv 文件</p>
-        </el-upload>
-        <div class="split-actions training-actions">
-          <el-button type="primary" :loading="uploading" :disabled="!csvFile || uploading" @click="uploadCsv">上传并分析</el-button>
-          <el-button :loading="loadingFiles" @click="loadFiles">刷新列表</el-button>
+        <div class="training-upload-inline">
+          <el-upload drag accept=".csv" :auto-upload="false" :limit="1" :on-change="selectCsv" :on-remove="removeCsv">
+            <p>拖拽或选择 YOLO results.csv 文件</p>
+          </el-upload>
+          <div class="training-upload-actions">
+            <el-button type="primary" :loading="uploading" :disabled="!csvFile || uploading" @click="uploadCsv">上传并分析</el-button>
+            <el-button :loading="loadingFiles" @click="loadFiles">刷新列表</el-button>
+            <el-button :disabled="!summary" @click="exportReport">导出报告</el-button>
+            <el-button type="danger" plain :disabled="!canManageTraining || !selectedName" @click="removeCurrentAnalysis">删除当前分析</el-button>
+            <el-button type="danger" :disabled="!canManageTraining || !files.length" @click="clearAllAnalyses">清空全部</el-button>
+          </div>
+          <div class="training-upload-select">
+            <el-select v-model="selectedName" filterable placeholder="选择已上传 CSV" class="full" :loading="loadingFiles" @change="loadSummary">
+              <el-option v-for="item in files" :key="item.name" :label="item.name" :value="item.name" />
+            </el-select>
+          </div>
         </div>
-        <div class="split-actions training-actions">
-          <el-button :disabled="!summary" @click="exportReport">导出报告</el-button>
-          <el-button type="danger" plain :disabled="!canManageTraining || !selectedName" @click="removeCurrentAnalysis">删除当前分析</el-button>
-          <el-button type="danger" :disabled="!canManageTraining || !files.length" @click="clearAllAnalyses">清空全部分析</el-button>
-        </div>
-        <el-divider />
-        <el-select v-model="selectedName" filterable placeholder="选择已上传 CSV" class="full" :loading="loadingFiles" @change="loadSummary">
-          <el-option v-for="item in files" :key="item.name" :label="item.name" :value="item.name" />
-        </el-select>
         <div class="table-scroll training-file-table">
-          <el-table v-loading="loadingFiles" :data="files" empty-text="暂无训练 CSV" @row-click="selectFileRow">
+          <el-table v-loading="loadingFiles" :data="files" empty-text="暂无训练 CSV" size="small" @row-click="selectFileRow">
             <el-table-column prop="name" label="文件名" min-width="170" />
             <el-table-column prop="rows" label="Epoch" width="90" />
             <el-table-column prop="best_epoch" label="最佳" width="90" />
           </el-table>
         </div>
       </el-card>
+    </section>
 
-      <section class="training-summary-stack">
-        <Transition name="list">
-          <div v-if="summary" key="summary" class="grid four training-metrics stagger-container">
-            <MotionPanel v-for="(card, i) in summaryCards" :key="card.label" effect="glow" :style="{ animationDelay: i * 80 + 'ms' }">
-              <div class="metric-card compact-metric">
-                <span>{{ card.label }}</span>
-                <AnimatedNumber :value="typeof card.value === 'number' ? card.value : 0" />
-                <small>{{ card.desc }}</small>
-              </div>
-            </MotionPanel>
+    <section class="training-summary-row">
+      <Transition name="list">
+        <div v-if="summary" key="summary" class="training-kpi-strip">
+          <div v-for="(card, i) in summaryCards" :key="card.label" class="kpi-item" :style="{ animationDelay: i * 80 + 'ms' }">
+            <span class="kpi-label">{{ card.label }}</span>
+            <strong class="kpi-value"><AnimatedNumber :value="typeof card.value === 'number' ? card.value : 0" /></strong>
+            <small class="kpi-desc">{{ card.desc }}</small>
           </div>
-        </Transition>
-        <el-card shadow="never" class="panel-card training-warning-card">
-          <template #header>自动风险提示</template>
-          <div v-if="summary?.warnings.length" class="training-warning-list">
-            <div v-for="(item, i) in summary.warnings" :key="i" :style="{ animationDelay: i * 80 + 'ms' }">{{ item }}</div>
-          </div>
-          <el-empty v-else :description="summary ? '当前摘要未发现明显风险提示' : '加载 CSV 后显示训练风险提示'" />
-        </el-card>
-      </section>
+        </div>
+      </Transition>
+      <div class="training-warning-inline">
+        <div v-if="summary?.warnings.length" class="training-warning-list">
+          <div v-for="(item, i) in summary.warnings" :key="i" :style="{ animationDelay: i * 80 + 'ms' }">{{ item }}</div>
+        </div>
+        <el-empty v-else :description="summary ? '无明显风险' : '加载 CSV 后显示'" :image-size="32" />
+      </div>
     </section>
 
     <section class="grid two training-chart-grid stagger-container">
@@ -433,14 +431,209 @@ function formatRatioNumber(value?: number | null): number {
 </script>
 
 <style scoped>
+/* 训练分析 Hero */
+.training-hero {
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 50%, #fdf4ff 100%);
+  border: 1px solid #c7d2fe;
+}
+
+/* 训练控制面板 — 独立一行 */
+.training-upload-row {
+  margin-bottom: var(--gap);
+}
+
+.training-upload-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.training-upload-inline :deep(.el-upload) {
+  width: auto;
+}
+
+.training-upload-inline :deep(.el-upload-dragger) {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+  padding: 20px 32px;
+  width: auto;
+}
+
+.training-upload-inline :deep(.el-upload-dragger:hover) {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-soft);
+}
+
+.training-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.training-upload-select {
+  min-width: 240px;
+}
+
+.training-control-panel :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.training-file-table {
+  margin-top: 0;
+}
+
+/* training-workbench 现在只包含摘要区 */
+.training-workbench {
+  margin-bottom: var(--gap);
+}
+
+/* 摘要行：KPI + 风险提示横向排列 */
+.training-summary-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.training-kpi-strip {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kpi-item {
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  animation: stagger-fade var(--motion-slow) var(--ease-emphasized) both;
+}
+
+.kpi-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.kpi-value {
+  display: block;
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.kpi-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--color-soft);
+  margin-top: 4px;
+}
+
+.training-warning-inline {
+  flex-shrink: 0;
+  width: 300px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: auto;
+}
+
+/* 训练指标卡片 */
+.training-metrics .metric-card {
+  text-align: center;
+}
+
+.compact-metric span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.compact-metric small {
+  display: block;
+  font-size: 11px;
+  color: var(--color-soft);
+  margin-top: 4px;
+}
+
+/* 图表面板 */
+.chart-panel {
+  transition: box-shadow var(--motion-fast);
+}
+
+.chart-panel:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* AI 训练面板 */
+.training-ai-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.training-ai-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #0891b2);
+  opacity: 0.7;
+}
+
+.training-ai-answer {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid var(--color-border);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* 风险提示 */
 .training-warning-list div {
   padding: 10px 14px;
   margin-bottom: 6px;
   border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
   font-size: 13px;
-  color: var(--color-ink);
+  color: #92400e;
   animation: slide-up-fade var(--motion-normal) var(--ease-emphasized) both;
+}
+
+@media (max-width: 1200px) {
+  .training-summary-row {
+    flex-direction: column;
+  }
+  .training-warning-inline {
+    width: 100%;
+  }
+  .training-kpi-strip {
+    flex-wrap: wrap;
+  }
+  .kpi-item {
+    min-width: 140px;
+  }
 }
 </style>

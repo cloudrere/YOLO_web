@@ -183,14 +183,101 @@ function formatBytes(value?: number) {
 </script>
 
 <style scoped>
+/* 维护 Hero */
+.maintenance-hero {
+  background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 50%, #fffbeb 100%);
+  border: 1px solid #fecaca;
+}
+
 .card-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
+
+/* 状态卡片增强 */
+.maintenance-status-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.maintenance-status-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
 .maintenance-status-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* 每张卡片不同颜色顶部条 */
+:deep(.stagger-container > *:nth-child(1)) .maintenance-status-card::before {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+}
+
+:deep(.stagger-container > *:nth-child(2)) .maintenance-status-card::before {
+  background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+}
+
+:deep(.stagger-container > *:nth-child(3)) .maintenance-status-card::before {
+  background: linear-gradient(90deg, #0891b2, #06b6d4);
+}
+
+:deep(.stagger-container > *:nth-child(4)) .maintenance-status-card::before {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
+/* 维护操作卡片增强 */
+.maintenance-action-card {
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.maintenance-action-card:hover {
+  border-color: #fecaca;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.06);
+}
+
+.maintenance-action-card h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--color-ink);
+}
+
+.maintenance-action-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+/* 路径框增强 */
+.path-box {
+  margin-top: 8px;
+  background: #f1f5f9;
+  border: 1px solid var(--color-border);
+}
+
+/* 诊断列表增强 */
+.diagnostic-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.diagnostic-list > div {
+  padding: 4px 0;
+}
+
+@media (max-width: 768px) {
+  .maintenance-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
